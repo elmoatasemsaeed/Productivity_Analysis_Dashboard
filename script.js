@@ -2588,19 +2588,50 @@ async function renderHistoricalAnalyticsView() {
     }
     existingTable.innerHTML = tableHtml;
 
-    // ========== NEW: ITERATION COMPLETION FORECAST (Monte Carlo) ==========
-    const forecastHtml = renderForecastWidgets(historicalData);
-    const forecastSection = document.createElement('div');
-    forecastSection.id = 'forecastSection';
-    forecastSection.style.margin = '40px 0 20px 0';
-    forecastSection.innerHTML = `
+    // ========== FORECAST SECTION ==========
+    // 1. التوقعات العامة (لكل التريشنز)
+    const overallForecastHtml = renderForecastWidgets(historicalData, null, "Overall");
+    const forecastContainer = document.createElement('div');
+    forecastContainer.id = 'forecastContainer';
+    forecastContainer.style.margin = '40px 0 20px 0';
+    forecastContainer.innerHTML = `
         <h3 style="color: #2c3e50; border-left: 6px solid #8e44ad; padding-left: 15px; margin-bottom: 10px;">
             🔮 Iteration Completion Forecast (Monte Carlo)
         </h3>
-        ${forecastHtml}
+        ${overallForecastHtml}
     `;
-    container.appendChild(forecastSection);
+    container.appendChild(forecastContainer);
+
+    // 2. التوقعات لكل Business Area
+    const allAreasSet = new Set();
+    historicalData.forEach(iter => {
+        if (iter.businessMetrics) {
+            iter.businessMetrics.forEach(b => allAreasSet.add(b.area));
+        }
+    });
+    const areasList = Array.from(allAreasSet).sort();
+
+    if (areasList.length > 0) {
+        const areaForecastContainer = document.createElement('div');
+        areaForecastContainer.id = 'areaForecastContainer';
+        areaForecastContainer.style.margin = '40px 0 20px 0';
+        areaForecastContainer.innerHTML = `
+            <h3 style="color: #2c3e50; border-left: 6px solid #2980b9; padding-left: 15px; margin-bottom: 10px;">
+                📈 Forecast by Business Area
+            </h3>
+        `;
+
+        areasList.forEach(area => {
+            const areaHtml = renderForecastWidgets(historicalData, area, "Business Area");
+            const areaDiv = document.createElement('div');
+            areaDiv.innerHTML = areaHtml;
+            areaForecastContainer.appendChild(areaDiv);
+        });
+
+        container.appendChild(areaForecastContainer);
+    }
 }
+
 window.onBusinessAreaChange = function() {
     const select = document.getElementById('businessAreaSelect');
     const selected = select.value;
@@ -2842,60 +2873,92 @@ function removeHoliday(date) {
     processData();
     renderIterationView();
 }
-function renderForecastWidgets(historicalData) {
-    // استخراج القيم التاريخية
-    const cycleTimes = historicalData
-        .map(d => d.avgCycleTime)
-        .filter(v => v !== undefined && v > 0);
-    const completedStories = historicalData
-        .map(d => d.completedStories)
-        .filter(v => v !== undefined && v > 0);
-    const reworkHours = historicalData
-        .map(d => d.totalBugActual)
-        .filter(v => v !== undefined && v > 0);
 
-    if (cycleTimes.length < 2 || completedStories.length < 2 || reworkHours.length < 2) {
+function renderForecastWidgets(historicalData, area = null, title = "Overall") {
+    // استخراج البيانات الخاصة بالمنطقة أو الكل
+    let cycleTimes = [];
+    let completedStories = [];
+    let reworkRatios = [];      // نسبة الريورك (مئوية)
+    let reworkHours = [];       // ساعات الريورك الفعلية (للعرض الصغير)
+
+    historicalData.forEach(iter => {
+        let metrics;
+        if (area) {
+            // البحث عن المنطقة في businessMetrics
+            const found = iter.businessMetrics && iter.businessMetrics.find(b => b.area === area);
+            if (!found) return;
+            metrics = found;
+        } else {
+            // استخدام الإحصائيات الكلية
+            metrics = iter;
+        }
+
+        // استخراج القيم
+        const ct = metrics.avgCycleTime;
+        const cs = metrics.completedStories;
+        // الريورك: نسبة (reworkRatio) + الساعات الفعلية
+        const rwRatio = metrics.reworkRatio;          // نسبة مئوية
+        const rwHours = metrics.totalBugActual || 0;  // ساعات
+
+        if (ct !== undefined && ct > 0) cycleTimes.push(ct);
+        if (cs !== undefined && cs > 0) completedStories.push(cs);
+        if (rwRatio !== undefined && rwRatio > 0) {
+            reworkRatios.push(rwRatio);
+            reworkHours.push(rwHours);
+        }
+    });
+
+    // التحقق من وجود بيانات كافية
+    if (cycleTimes.length < 2 || completedStories.length < 2 || reworkRatios.length < 2) {
         return `<div class="card" style="padding: 20px; margin: 20px 0;">
-            <p style="color: #e67e22;">⚠️ Not enough historical data for reliable forecast (need at least 2 iterations with complete metrics).</p>
+            <p style="color: #e67e22;">⚠️ Not enough historical data for "${title}" (need at least 2 iterations with complete metrics).</p>
         </div>`;
     }
 
     const NUM_SIM = 5000;
     const ctSims = runBootstrap(cycleTimes, NUM_SIM);
     const csSims = runBootstrap(completedStories, NUM_SIM);
-    const rhSims = runBootstrap(reworkHours, NUM_SIM);
+    const rrSims = runBootstrap(reworkRatios, NUM_SIM);
+    // بالنسبة للساعات نستخدم متوسط الساعات الفعلية (لا حاجة لمحاكاة منفصلة، نأخذ الوسيط)
+    const rhMedian = reworkHours.reduce((a,b) => a+b, 0) / reworkHours.length;
 
     const ct = getPercentiles(ctSims);
     const cs = getPercentiles(csSims);
-    const rh = getPercentiles(rhSims);
+    const rr = getPercentiles(rrSims);
+
+    // إعداد النص الخاص بالمنطقة
+    const areaLabel = area ? ` (${area})` : '';
 
     return `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; margin: 30px 0;">
-            <div class="card" style="padding: 20px; border-top: 5px solid #3498db; background: #f8fcff;">
-                <h4 style="margin: 0 0 8px 0; color: #2c3e50;">⏱️ Forecast Cycle Time</h4>
-                <div style="font-size: 2.2em; font-weight: bold; color: #2980b9;">${ct.median.toFixed(1)} <small style="font-size: 0.4em; color: #7f8c8d;">days</small></div>
-                <div style="color: #7f8c8d; font-size: 0.9em; margin-top: 5px;">
-                    Range: <b>${ct.low.toFixed(1)} – ${ct.high.toFixed(1)}</b> days (10th–90th %ile)
+        <div style="margin: 30px 0 15px 0;">
+            <h4 style="color: #2c3e50; border-left: 4px solid #8e44ad; padding-left: 12px;">📊 ${title} ${areaLabel}</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px;">
+                <!-- Cycle Time -->
+                <div class="card" style="padding: 18px; border-top: 5px solid #3498db; background: #f8fcff;">
+                    <div style="font-size: 0.9em; color: #7f8c8d;">⏱️ Forecast Cycle Time</div>
+                    <div style="font-size: 2em; font-weight: bold; color: #2980b9;">${ct.median.toFixed(1)} <small style="font-size: 0.4em; color: #7f8c8d;">days</small></div>
+                    <div style="color: #7f8c8d; font-size: 0.85em;">Range: ${ct.low.toFixed(1)} – ${ct.high.toFixed(1)} days</div>
+                    <div style="font-size: 0.75em; color: #95a5a6;">Based on ${cycleTimes.length} iterations</div>
                 </div>
-                <div style="font-size: 0.8em; color: #95a5a6; margin-top: 8px;">Based on ${cycleTimes.length} iterations</div>
-            </div>
 
-            <div class="card" style="padding: 20px; border-top: 5px solid #27ae60; background: #f4fcf7;">
-                <h4 style="margin: 0 0 8px 0; color: #2c3e50;">📊 Forecast Completed Stories</h4>
-                <div style="font-size: 2.2em; font-weight: bold; color: #27ae60;">${cs.median.toFixed(0)} <small style="font-size: 0.4em; color: #7f8c8d;">stories</small></div>
-                <div style="color: #7f8c8d; font-size: 0.9em; margin-top: 5px;">
-                    Range: <b>${cs.low.toFixed(0)} – ${cs.high.toFixed(0)}</b> stories
+                <!-- Completed Stories -->
+                <div class="card" style="padding: 18px; border-top: 5px solid #27ae60; background: #f4fcf7;">
+                    <div style="font-size: 0.9em; color: #7f8c8d;">📊 Forecast Completed Stories</div>
+                    <div style="font-size: 2em; font-weight: bold; color: #27ae60;">${cs.median.toFixed(0)} <small style="font-size: 0.4em; color: #7f8c8d;">stories</small></div>
+                    <div style="color: #7f8c8d; font-size: 0.85em;">Range: ${cs.low.toFixed(0)} – ${cs.high.toFixed(0)} stories</div>
+                    <div style="font-size: 0.75em; color: #95a5a6;">Based on ${completedStories.length} iterations</div>
                 </div>
-                <div style="font-size: 0.8em; color: #95a5a6; margin-top: 8px;">Based on ${completedStories.length} iterations</div>
-            </div>
 
-            <div class="card" style="padding: 20px; border-top: 5px solid #e67e22; background: #fef9f4;">
-                <h4 style="margin: 0 0 8px 0; color: #2c3e50;">🔄 Forecast Rework Hours</h4>
-                <div style="font-size: 2.2em; font-weight: bold; color: #e67e22;">${rh.median.toFixed(1)} <small style="font-size: 0.4em; color: #7f8c8d;">hrs</small></div>
-                <div style="color: #7f8c8d; font-size: 0.9em; margin-top: 5px;">
-                    Range: <b>${rh.low.toFixed(1)} – ${rh.high.toFixed(1)}</b> hrs
+                <!-- Rework Ratio + Hours -->
+                <div class="card" style="padding: 18px; border-top: 5px solid #e67e22; background: #fef9f4;">
+                    <div style="font-size: 0.9em; color: #7f8c8d;">🔄 Forecast Rework</div>
+                    <div style="font-size: 2em; font-weight: bold; color: #e67e22;">${rr.median.toFixed(1)}% <small style="font-size: 0.4em; color: #7f8c8d;">ratio</small></div>
+                    <div style="color: #7f8c8d; font-size: 0.85em;">
+                        Range: ${rr.low.toFixed(1)}% – ${rr.high.toFixed(1)}% 
+                        <span style="font-size: 0.8em; color: #95a5a6;">(${rhMedian.toFixed(1)} hrs avg)</span>
+                    </div>
+                    <div style="font-size: 0.75em; color: #95a5a6;">Based on ${reworkRatios.length} iterations</div>
                 </div>
-                <div style="font-size: 0.8em; color: #95a5a6; margin-top: 8px;">Based on ${reworkHours.length} iterations</div>
             </div>
         </div>
     `;
@@ -2929,7 +2992,7 @@ function getPercentiles(arr, lowP = 10, highP = 90) {
     const low = getPercentile(sorted, lowP);
     const high = getPercentile(sorted, highP);
     return { median, low, high };
-}    
+}
 
 // ==================== View Switching ====================
 function showView(viewId) {
