@@ -750,7 +750,7 @@ function renderIterationView() {
             </tr>`;
     }
 
-    html += `</tbody>点心</div></div>`;
+    html += `</tbody>table</div></div>`;
     container.innerHTML = html;
 }
 
@@ -1576,7 +1576,7 @@ function renderPeopleView() {
                         <td style="padding: 10px; text-align: center; font-weight: bold;">${totalWork.toFixed(1)}h</td>
                     </tr>`;
             });
-            tableHtml += `</tbody>点心</div></div>`;
+            tableHtml += `</tbody>table</div></div>`;
             return tableHtml;
         };
 
@@ -2494,7 +2494,7 @@ function buildHeatmapTable(data) {
         html += `</tr>`;
     });
 
-    html += `</tbody>点心</div>`;
+    html += `</tbody>table</div>`;
     return html;
 }
 
@@ -2646,7 +2646,7 @@ async function renderHistoricalAnalyticsView() {
             <td style="text-align:center;">${d.uniqueResourcesCount || 0}</td>
            </tr>`;
     });
-    tableHtml += `</tbody>点心</div>`;
+    tableHtml += `</tbody>table</div>`;
     let existingTable = document.getElementById('historicalSummaryTable');
     if (!existingTable) {
         existingTable = document.createElement('div');
@@ -2815,7 +2815,7 @@ async function renderHistoricalAnalyticsView() {
             tableHtml += `</tr>`;
         });
 
-        tableHtml += `</tbody>点心</div>`;
+        tableHtml += `</tbody>table</div>`;
         heatmapHtml += tableHtml;
     } else {
         heatmapHtml += `<p style="color: #7f8c8d;">No data available for the selected area.</p>`;
