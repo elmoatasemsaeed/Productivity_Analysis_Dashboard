@@ -2690,6 +2690,7 @@ async function renderHistoricalAnalyticsView() {
     }
 
     // ========== HEATMAP SECTION ==========
+    
     let heatmapContainer = document.getElementById('heatmapContainer');
     if (!heatmapContainer) {
         heatmapContainer = document.createElement('div');
@@ -2710,7 +2711,7 @@ async function renderHistoricalAnalyticsView() {
                     iteration: iter.iterationName,
                     CT: ba.avgCycleTime || 0,
                     RW: ba.reworkRatio || 0,
-                    EV: ba.effortVariance || 0,
+                    EV: ba.effortVariance || 0,    // القيمة الأصلية للعرض
                     Bugs: ba.internalBugs || 0
                 });
             }
@@ -2721,14 +2722,101 @@ async function renderHistoricalAnalyticsView() {
             iteration: iter.iterationName,
             CT: iter.avgCycleTime || 0,
             RW: iter.reworkRatio || 0,
-            EV: iter.effortVariance || 0,
+            EV: iter.effortVariance || 0,       // القيمة الأصلية للعرض
             Bugs: iter.internalBugs || 0
         }));
     }
 
+    // ====== الحل الجديد: حساب الألوان يدوياً مع معالجة خاصة لـ EV ======
     let heatmapHtml = `<h3 style="color: #2c3e50; border-left: 6px solid #e74c3c; padding-left: 15px; margin-top: 10px;">🔥 Heatmap of Key Metrics ${areaForHeatmap ? `(${areaForHeatmap})` : '(Overall)'}</h3>`;
+    
     if (heatmapData.length > 0) {
-        heatmapHtml += buildHeatmapTable(heatmapData);
+        // 1. حساب المدى (Min/Max) لكل مقياس
+        // ولكن بالنسبة لـ EV، سنحسب المدى على أساس "القيمة المطلقة" (Abs)
+        const allCT = heatmapData.map(d => d.CT);
+        const allRW = heatmapData.map(d => d.RW);
+        const allEV = heatmapData.map(d => d.EV);
+        const allBugs = heatmapData.map(d => d.Bugs);
+        
+        // حساب القيم المطلقة لـ EV لإيجاد المدى
+        const allAbsEV = allEV.map(v => Math.abs(v));
+        const minEV = Math.min(...allAbsEV);
+        const maxEV = Math.max(...allAbsEV);
+        
+        const minCT = Math.min(...allCT);
+        const maxCT = Math.max(...allCT);
+        const minRW = Math.min(...allRW);
+        const maxRW = Math.max(...allRW);
+        const minBugs = Math.min(...allBugs);
+        const maxBugs = Math.max(...allBugs);
+
+        // دالة مساعدة لتوليد اللون (تُستخدم لكل المقاييس ما عدا EV)
+        const getColor = (value, min, max) => {
+            if (max === min) return '#2ecc71'; // لون محايد أخضر
+            // منع القيم السالبة من كسر النسبة (للمقاييس الأخرى التي قد تكون سالبة نظرياً)
+            const ratio = Math.max(0, Math.min(1, (value - min) / (max - min)));
+            const r = Math.round(255 * ratio);
+            const g = Math.round(255 * (1 - ratio));
+            return `rgb(${r}, ${g}, 80)`;
+        };
+
+        // دالة خاصة لتوليد لون EV بناءً على القيمة المطلقة (Abs)
+        const getEVColor = (value) => {
+            const absVal = Math.abs(value);
+            if (maxEV === minEV) return '#2ecc71';
+            // النسبة: كلما زادت القيمة المطلقة، زادت النسبة (أحمر)
+            const ratio = Math.max(0, Math.min(1, (absVal - minEV) / (maxEV - minEV)));
+            const r = Math.round(255 * ratio);
+            const g = Math.round(255 * (1 - ratio));
+            return `rgb(${r}, ${g}, 80)`;
+        };
+
+        // بداية بناء الجدول
+        let tableHtml = `
+        <div style="overflow-x:auto; margin-top:20px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.95em; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden;">
+                <thead>
+                    <tr style="background:#2c3e50; color:white;">
+                        <th style="padding:12px; text-align:center;">Iteration</th>
+                        <th style="padding:12px; text-align:center;">CT (Cycle Time)</th>
+                        <th style="padding:12px; text-align:center;">RW (Rework %)</th>
+                        <th style="padding:12px; text-align:center;">EV (Effort Variance %)</th>
+                        <th style="padding:12px; text-align:center;">Bugs (Count)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        heatmapData.forEach(row => {
+            const ctColor = getColor(row.CT, minCT, maxCT);
+            const rwColor = getColor(row.RW, minRW, maxRW);
+            const evColor = getEVColor(row.EV);
+            const bugsColor = getColor(row.Bugs, minBugs, maxBugs);
+
+            // تحديد لون النص بناءً على شدة اللون (تحسين القراءة)
+            const getTextColor = (val, min, max) => {
+                if (max === min) return '#2c3e50';
+                const ratio = (val - min) / (max - min);
+                return ratio > 0.5 ? 'white' : '#2c3e50';
+            };
+            const getEVTextColor = (val) => {
+                const absVal = Math.abs(val);
+                if (maxEV === minEV) return '#2c3e50';
+                const ratio = (absVal - minEV) / (maxEV - minEV);
+                return ratio > 0.5 ? 'white' : '#2c3e50';
+            };
+
+            tableHtml += `<tr>`;
+            tableHtml += `<td style="padding:12px; text-align:center; font-weight:600; background:#f8f9fa;">${row.iteration}</td>`;
+            tableHtml += `<td style="padding:12px; text-align:center; background-color:${ctColor}; color:${getTextColor(row.CT, minCT, maxCT)}; font-weight:bold; cursor:help;" title="CT: ${row.CT.toFixed(1)} days">${row.CT.toFixed(1)}</td>`;
+            tableHtml += `<td style="padding:12px; text-align:center; background-color:${rwColor}; color:${getTextColor(row.RW, minRW, maxRW)}; font-weight:bold; cursor:help;" title="RW: ${row.RW.toFixed(1)}%">${row.RW.toFixed(1)}%</td>`;
+            // عمود EV باستخدام الدالة الخاصة
+            tableHtml += `<td style="padding:12px; text-align:center; background-color:${evColor}; color:${getEVTextColor(row.EV)}; font-weight:bold; cursor:help;" title="EV: ${row.EV.toFixed(1)}% (Closer to 0 is better)">${row.EV.toFixed(1)}%</td>`;
+            tableHtml += `<td style="padding:12px; text-align:center; background-color:${bugsColor}; color:${getTextColor(row.Bugs, minBugs, maxBugs)}; font-weight:bold; cursor:help;" title="Bugs: ${row.Bugs}">${row.Bugs}</td>`;
+            tableHtml += `</tr>`;
+        });
+
+        tableHtml += `</tbody>点心</div>`;
+        heatmapHtml += tableHtml;
     } else {
         heatmapHtml += `<p style="color: #7f8c8d;">No data available for the selected area.</p>`;
     }
