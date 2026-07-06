@@ -2442,11 +2442,73 @@ function renderStackedPercentageBar(canvasId, labels, datasets, title) {
     });
 }
 
+// ==================== HEATMAP HELPER ====================
+function buildHeatmapTable(data) {
+    if (!data || data.length === 0) return '<p style="color:#7f8c8d;">لا توجد بيانات كافية للـ Heatmap.</p>';
+
+    const metrics = ['CT', 'RW', 'EV', 'Bugs'];
+    const ranges = {};
+    metrics.forEach(m => {
+        const values = data.map(d => d[m]).filter(v => v !== undefined && v !== null);
+        ranges[m] = { min: Math.min(...values), max: Math.max(...values) };
+    });
+
+    const getColor = (value, min, max) => {
+        if (max === min) return '#2ecc71'; // لون محايد إذا كانت القيم متساوية
+        const ratio = (value - min) / (max - min); // 0 ← أخضر, 1 ← أحمر
+        const r = Math.round(255 * ratio);
+        const g = Math.round(255 * (1 - ratio));
+        return `rgb(${r}, ${g}, 80)`;
+    };
+
+    let html = `
+        <div style="overflow-x:auto; margin-top:20px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.95em; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden;">
+                <thead>
+                    <tr style="background:#2c3e50; color:white;">
+                        <th style="padding:12px; text-align:center;">Iteration</th>
+                        <th style="padding:12px; text-align:center;">Cycle Time (days)</th>
+                        <th style="padding:12px; text-align:center;">Rework %</th>
+                        <th style="padding:12px; text-align:center;">Effort Variance %</th>
+                        <th style="padding:12px; text-align:center;">Bugs</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    data.forEach(row => {
+        html += `<tr>`;
+        html += `<td style="padding:12px; text-align:center; font-weight:600; background:#f8f9fa;">${row.iteration}</td>`;
+        metrics.forEach(m => {
+            const val = row[m];
+            const { min, max } = ranges[m];
+            const color = getColor(val, min, max);
+            const display = typeof val === 'number' ? val.toFixed(1) : val;
+            html += `
+                <td style="padding:12px; text-align:center; background-color:${color}; color:${val > (min+max)/2 ? 'white' : '#2c3e50'}; font-weight:bold; cursor:help;" 
+                    title="${m}: ${display}">
+                    ${display}
+                </td>
+            `;
+        });
+        html += `</tr>`;
+    });
+
+    html += `</tbody>点心</div>`;
+    return html;
+}
+
+// ==================== UPDATED renderHistoricalAnalyticsView ====================
 async function renderHistoricalAnalyticsView() {
     const container = document.getElementById('historical-analytics-view');
     if (!container) return;
 
-    let historicalData = await loadHistoricalSummary();
+    // Use cached data if available, else load from GitHub
+    let historicalData = window.__historicalData;
+    if (!historicalData) {
+        historicalData = await loadHistoricalSummary();
+        window.__historicalData = historicalData;
+    }
     if (!historicalData || historicalData.length === 0) {
         container.innerHTML = `<div class="card"><p>No historical data available. Please click "Sync All Iterations Data" first.</p></div>`;
         return;
@@ -2464,12 +2526,12 @@ async function renderHistoricalAnalyticsView() {
 
     const labels = historicalData.map(d => d.iterationName);
 
-    // Overall charts
+    // ---- Overall charts (always shown) ----
     renderLineChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %');
     renderLineChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %');
     renderLineChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days');
 
-    // Multi-line workload chart (Dev, Tester, DB) - now including meeting hours as dashed lines
+    // Multi-line workload chart (Dev, Tester, DB) with meetings as dashed
     const devWorkloadSolid = historicalData.map(d => d.avgDevHours || 0);
     const devWorkloadIncl = historicalData.map(d => d.avgDevHoursInclMeetings || 0);
     const testWorkloadSolid = historicalData.map(d => d.avgTestHours || 0);
@@ -2486,7 +2548,7 @@ async function renderHistoricalAnalyticsView() {
         { label: 'DB Specialists + Meeting (avg hours)', data: dbWorkloadIncl, borderColor: '#8e44ad', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#8e44ad', borderDash: [5,5] }
     ], 'Hours per Resource');
 
-    // Resource distribution chart with names (stacked bar with custom tooltip)
+    // Resource distribution chart with names (stacked bar)
     const devCounts = historicalData.map(d => d.devCount || 0);
     const testerCounts = historicalData.map(d => d.testerCount || 0);
     const dbCounts = historicalData.map(d => d.dbCount || 0);
@@ -2519,7 +2581,7 @@ async function renderHistoricalAnalyticsView() {
         { label: 'Specific Bugs', data: specificBugs, backgroundColor: '#3498db' }
     ], 'Bug Type');
 
-    // Business area filter dropdown
+    // ---- Business Area filter dropdown ----
     const allAreas = new Set();
     historicalData.forEach(iter => {
         if (iter.businessMetrics && Array.isArray(iter.businessMetrics)) {
@@ -2548,11 +2610,16 @@ async function renderHistoricalAnalyticsView() {
         areaSelect.innerHTML = '<option value="">-- All Areas (Overall) --</option>' + areasArray.map(a => `<option value="${a}">${a}</option>`).join('');
     }
 
-    window.__historicalData = historicalData;
+    // Restore saved selection
     const savedArea = localStorage.getItem('selectedBusinessArea');
     if (savedArea && areasArray.includes(savedArea)) {
         areaSelect.value = savedArea;
-        onBusinessAreaChange();
+    }
+
+    // ---- Filtered charts (based on selected area) ----
+    const selectedArea = areaSelect.value;
+    if (selectedArea) {
+        renderFilteredCharts(historicalData, selectedArea);
     } else {
         const msgDiv = document.getElementById('filteredChartsMessage');
         if (msgDiv) msgDiv.innerText = '';
@@ -2561,7 +2628,7 @@ async function renderHistoricalAnalyticsView() {
         });
     }
 
-    // Summary table
+    // ---- Summary table ----
     let tableHtml = `<table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
         <thead><tr style="background:#2c3e50; color:white;">
             <th style="padding:12px;">Iteration</th><th>Completed Stories</th><th>Avg Cycle (days)</th><th>Effort Var %</th><th>DRE %</th><th>Rework %</th><th>Dev Hrs</th><th>Test Hrs</th><th>Unique Resources</th>
@@ -2588,63 +2655,92 @@ async function renderHistoricalAnalyticsView() {
     }
     existingTable.innerHTML = tableHtml;
 
-    // ========== FORECAST SECTION ==========
-    // 1. التوقعات العامة (لكل التريشنز)
+    // ---- Forecast (Overall) ----
     const overallForecastHtml = renderForecastWidgets(historicalData, null, "Overall");
-    const forecastContainer = document.createElement('div');
-    forecastContainer.id = 'forecastContainer';
-    forecastContainer.style.margin = '40px 0 20px 0';
+    let forecastContainer = document.getElementById('forecastContainer');
+    if (!forecastContainer) {
+        forecastContainer = document.createElement('div');
+        forecastContainer.id = 'forecastContainer';
+        container.appendChild(forecastContainer);
+    }
     forecastContainer.innerHTML = `
-        <h3 style="color: #2c3e50; border-left: 6px solid #8e44ad; padding-left: 15px; margin-bottom: 10px;">
+        <h3 style="color: #2c3e50; border-left: 6px solid #8e44ad; padding-left: 15px; margin: 30px 0 10px 0;">
             🔮 Iteration Completion Forecast (Monte Carlo)
         </h3>
         ${overallForecastHtml}
     `;
-    container.appendChild(forecastContainer);
 
-    // 2. التوقعات لكل Business Area
-    const allAreasSet = new Set();
-    historicalData.forEach(iter => {
-        if (iter.businessMetrics) {
-            iter.businessMetrics.forEach(b => allAreasSet.add(b.area));
-        }
-    });
-    const areasList = Array.from(allAreasSet).sort();
-
-    if (areasList.length > 0) {
-        const areaForecastContainer = document.createElement('div');
+    // ---- Forecast per Business Area ----
+    let areaForecastContainer = document.getElementById('areaForecastContainer');
+    if (!areaForecastContainer) {
+        areaForecastContainer = document.createElement('div');
         areaForecastContainer.id = 'areaForecastContainer';
-        areaForecastContainer.style.margin = '40px 0 20px 0';
-        areaForecastContainer.innerHTML = `
-            <h3 style="color: #2c3e50; border-left: 6px solid #2980b9; padding-left: 15px; margin-bottom: 10px;">
-                📈 Forecast by Business Area
-            </h3>
-        `;
-
-        areasList.forEach(area => {
-            const areaHtml = renderForecastWidgets(historicalData, area, "Business Area");
-            const areaDiv = document.createElement('div');
-            areaDiv.innerHTML = areaHtml;
-            areaForecastContainer.appendChild(areaDiv);
-        });
-
         container.appendChild(areaForecastContainer);
     }
-}
+    if (areasArray.length > 0) {
+        let areaHtml = `<h3 style="color: #2c3e50; border-left: 6px solid #2980b9; padding-left: 15px; margin: 40px 0 10px 0;">
+                            📈 Forecast by Business Area
+                        </h3>`;
+        areasArray.forEach(area => {
+            areaHtml += renderForecastWidgets(historicalData, area, "Business Area");
+        });
+        areaForecastContainer.innerHTML = areaHtml;
+    } else {
+        areaForecastContainer.innerHTML = '';
+    }
 
+    // ========== HEATMAP SECTION ==========
+    let heatmapContainer = document.getElementById('heatmapContainer');
+    if (!heatmapContainer) {
+        heatmapContainer = document.createElement('div');
+        heatmapContainer.id = 'heatmapContainer';
+        heatmapContainer.style.margin = '40px 0 20px 0';
+        container.appendChild(heatmapContainer);
+    }
+
+    // Build heatmap data based on selected area (or overall)
+    let heatmapData = [];
+    const areaForHeatmap = document.getElementById('businessAreaSelect')?.value || '';
+    if (areaForHeatmap) {
+        // Use business area specific metrics
+        historicalData.forEach(iter => {
+            const ba = iter.businessMetrics?.find(b => b.area === areaForHeatmap);
+            if (ba) {
+                heatmapData.push({
+                    iteration: iter.iterationName,
+                    CT: ba.avgCycleTime || 0,
+                    RW: ba.reworkRatio || 0,
+                    EV: ba.effortVariance || 0,
+                    Bugs: ba.internalBugs || 0
+                });
+            }
+        });
+    } else {
+        // Use overall metrics
+        heatmapData = historicalData.map(iter => ({
+            iteration: iter.iterationName,
+            CT: iter.avgCycleTime || 0,
+            RW: iter.reworkRatio || 0,
+            EV: iter.effortVariance || 0,
+            Bugs: iter.internalBugs || 0
+        }));
+    }
+
+    let heatmapHtml = `<h3 style="color: #2c3e50; border-left: 6px solid #e74c3c; padding-left: 15px; margin-top: 10px;">🔥 Heatmap of Key Metrics ${areaForHeatmap ? `(${areaForHeatmap})` : '(Overall)'}</h3>`;
+    if (heatmapData.length > 0) {
+        heatmapHtml += buildHeatmapTable(heatmapData);
+    } else {
+        heatmapHtml += `<p style="color: #7f8c8d;">No data available for the selected area.</p>`;
+    }
+    heatmapContainer.innerHTML = heatmapHtml;
+}
+// ==================== UPDATED onBusinessAreaChange ====================
 window.onBusinessAreaChange = function() {
     const select = document.getElementById('businessAreaSelect');
     const selected = select.value;
     localStorage.setItem('selectedBusinessArea', selected);
-    if (selected && window.__historicalData) {
-        renderFilteredCharts(window.__historicalData, selected);
-    } else {
-        const msgDiv = document.getElementById('filteredChartsMessage');
-        if (msgDiv) msgDiv.innerText = '';
-        ['filteredEvChart','filteredRwChart','filteredCtChart','filteredAvgWorkloadChart','filteredResourceDistChart','filteredBugSeverityChart','filteredBugTypeChart'].forEach(id => {
-            if (window[id+'Chart']) window[id+'Chart'].destroy();
-        });
-    }
+    // Re-render everything (including heatmap) with the new filter
+    renderHistoricalAnalyticsView();
 };
 
 // Helper functions for historical sync (duplicate from main but safe)
