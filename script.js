@@ -1,4 +1,4 @@
-// 1. Global Variables (Top Level Scope)
+// 1. Global Variables (Top Level Scope)1
 let rawData = [];
 let processedStories = [];
 let holidays = JSON.parse(localStorage.getItem('holidays') || "[]");
