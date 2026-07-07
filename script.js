@@ -2522,73 +2522,39 @@ function buildHeatmapTable(data) {
 }
 
 // ==================== CONTROL LIMITS USING MOVING RANGE (METHOD 1) ====================
-/**
- * حساب حدود التحكم (UCL, LCL) باستخدام طريقة المدى المتحرك (Moving Range)
- * هذه الطريقة أكثر مقاومة للقيم المتطرفة (Outliers) لأنها تعتمد على التغير بين النقاط المتتالية
- * بدلاً من الانحراف المعياري العام الذي يتأثر بالقيم الشاذة.
- * 
- * المعادلات المستخدمة:
- * - Mean = متوسط جميع القيم
- * - MR = |x(i) - x(i-1)|  (المدى بين كل نقطة والتي تسبقها)
- * - MR_bar = متوسط جميع قيم MR
- * - Sigma_est = MR_bar / 1.128  (حيث 1.128 هو ثابت d2 لعينة حجمها 2)
- * - UCL = Mean + 3 * Sigma_est
- * - LCL = Mean - 3 * Sigma_est
- */
 function calculateControlLimits(data) {
     const n = data.length;
-    
-    // 1. التحقق من صحة البيانات
     if (!data || n === 0) {
-        return { mean: 0, ucl: 0, lcl: 0 };
+        return { mean: 0, ucl: 0, lcl: 0, sigma: 0 };
     }
 
-    // 2. حساب المتوسط الحسابي (Mean) - يظل كما هو كخط مركزي
     const mean = data.reduce((a, b) => a + b, 0) / n;
 
-    // 3. حساب المدى المتحرك (Moving Range) بين كل نقطة والتي تسبقها
-    //    MR = |x(i) - x(i-1)|  for i = 1 to n-1
     let sumMR = 0;
     let validMRCount = 0;
     for (let i = 1; i < n; i++) {
-        const mr = Math.abs(data[i] - data[i - 1]);
-        sumMR += mr;
+        sumMR += Math.abs(data[i] - data[i - 1]);
         validMRCount++;
     }
 
     let sigma;
-    
-    // 4. إذا كان لدينا نقطتان على الأقل (أي يوجد مدى متحرك واحد على الأقل)
     if (validMRCount > 0) {
-        // متوسط المدى المتحرك
         const meanMR = sumMR / validMRCount;
-        
-        // تحويل متوسط المدى إلى انحراف معياري تقديري
-        // المعامل 1.128 هو قيمة d2 المستخدمة عند مقارنة نقطتين متتاليتين (n=2)
-        // هذه القيمة مأخوذة من جداول التحكم الإحصائي (SPC Tables)
         sigma = meanMR / 1.128;
-        
-        // 🔥 معالجة الحالة التي تكون فيها جميع البيانات متساوية (المدى = 0)
-        // لو تركنا sigma = 0، ستصبح UCL = LCL = Mean، وهذا غير منطقي.
-        // لذلك نضع قيمة افتراضية صغيرة جداً تعادل 5% من المتوسط (أو 0.1 إن كان المتوسط صفراً)
         if (sigma === 0 || !isFinite(sigma)) {
             sigma = Math.max(0.1, Math.abs(mean) * 0.05);
         }
     } else {
-        // 5. حالة خاصة: لدينا نقطة واحدة فقط (لا يمكن حساب مدى متحرك)
-        // نستخدم انحراف معياري تقليدي كحل احتياطي، أو نضع قيمة افتراضية
         const traditionalSigma = Math.sqrt(data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n);
         sigma = (traditionalSigma === 0 || !isFinite(traditionalSigma)) ? 0.1 : traditionalSigma;
     }
 
-    // 6. حساب حدي التحكم العلوي والسفلي
     const ucl = mean + 3 * sigma;
     const lcl = mean - 3 * sigma;
 
-    // 7. إرجاع النتائج
-    return { mean, ucl, lcl };
+    // ✅ إرجاع sigma أيضاً لاستخدامها في رسم الخطوط الإضافية
+    return { mean, ucl, lcl, sigma };
 }
-
 /**
  * رسم مخطط تحكم (Control Chart) باستخدام Chart.js
  * - خط البيانات مع تلوين النقاط الخارجة باللون الأحمر
@@ -2599,27 +2565,87 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
-    // تدمير الرسم السابق إن وجد
+
     if (window[canvasId + 'Chart']) {
         window[canvasId + 'Chart'].destroy();
         delete window[canvasId + 'Chart'];
     }
 
-    const { mean, ucl, lcl } = calculateControlLimits(data);
+    const { mean, ucl, lcl, sigma } = calculateControlLimits(data);
 
-    // تحديد النقاط الخارجة عن الحدود
-    const pointColors = data.map(val => (val > ucl || val < lcl) ? '#e74c3c' : color);
+    // --- حساب خطوط المناطق ---
+    const oneSigmaUp = mean + sigma;
+    const oneSigmaDown = mean - sigma;
+    const twoSigmaUp = mean + 2 * sigma;
+    const twoSigmaDown = mean - 2 * sigma;
 
-    // تجميع النقاط الخارجة للتنبيه
+    // --- تحديد النقاط الخارجة حسب القواعد ---
+    const pointColors = data.map(val => {
+        if (val > ucl || val < lcl) return '#e74c3c';      // أحمر: خارج 3σ
+        if (val > twoSigmaUp || val < twoSigmaDown) return '#f39c12'; // برتقالي: خارج 2σ
+        if (val > oneSigmaUp || val < oneSigmaDown) return '#f1c40f'; // أصفر: خارج 1σ
+        return color; // لون طبيعي
+    });
+
+    // --- تحليل قواعد ويسترن إلكتريك (WECO Rules) للتنبيهات ---
     const outOfControl = [];
+    const alerts = [];
+
+    // القاعدة 1: أي نقطة خارج ±3σ
     data.forEach((val, i) => {
         if (val > ucl || val < lcl) {
-            outOfControl.push({ label: labels[i], value: val, limit: val > ucl ? 'UCL' : 'LCL' });
+            outOfControl.push({ label: labels[i], value: val, limit: val > ucl ? 'UCL (3σ)' : 'LCL (3σ)' });
         }
     });
 
-    // إنشاء عنصر التنبيهات إذا لم يكن موجوداً
+    // القاعدة 2: نقطتان من أصل 3 متتالية خارج ±2σ (على نفس الجانب)
+    for (let i = 2; i < data.length; i++) {
+        const window = [data[i-2], data[i-1], data[i]];
+        const above2σ = window.filter(v => v > twoSigmaUp);
+        const below2σ = window.filter(v => v < twoSigmaDown);
+        if (above2σ.length >= 2) {
+            alerts.push(`⚠️ Rule 2: 2 of 3 points above +2σ (${labels[i-2]} to ${labels[i]})`);
+        }
+        if (below2σ.length >= 2) {
+            alerts.push(`⚠️ Rule 2: 2 of 3 points below -2σ (${labels[i-2]} to ${labels[i]})`);
+        }
+    }
+
+    // القاعدة 3: 4 نقاط من أصل 5 متتالية خارج ±1σ (على نفس الجانب)
+    for (let i = 4; i < data.length; i++) {
+        const window = [data[i-4], data[i-3], data[i-2], data[i-1], data[i]];
+        const above1σ = window.filter(v => v > oneSigmaUp);
+        const below1σ = window.filter(v => v < oneSigmaDown);
+        if (above1σ.length >= 4) {
+            alerts.push(`⚠️ Rule 3: 4 of 5 points above +1σ (${labels[i-4]} to ${labels[i]})`);
+        }
+        if (below1σ.length >= 4) {
+            alerts.push(`⚠️ Rule 3: 4 of 5 points below -1σ (${labels[i-4]} to ${labels[i]})`);
+        }
+    }
+
+    // القاعدة 4: 7 نقاط متتالية على نفس الجانب من المتوسط (Run Rule)
+    let runCount = 0;
+    let runDirection = 0; // 1 for above, -1 for below
+    for (let i = 0; i < data.length; i++) {
+        if (data[i] > mean) {
+            if (runDirection === 1) runCount++;
+            else { runDirection = 1; runCount = 1; }
+        } else if (data[i] < mean) {
+            if (runDirection === -1) runCount++;
+            else { runDirection = -1; runCount = 1; }
+        } else {
+            runCount = 0; // نقطة تساوي المتوسط تكسر الرن
+        }
+        if (runCount >= 7) {
+            const startIdx = i - runCount + 1;
+            const side = runDirection === 1 ? 'above' : 'below';
+            alerts.push(`⚠️ Rule 4: 7 consecutive points ${side} the Mean (${labels[startIdx]} to ${labels[i]})`);
+            runCount = 0; // لمنع التكرار
+        }
+    }
+
+    // --- إنشاء عنصر التنبيهات ---
     let alertDiv = document.getElementById(canvasId + 'Alerts');
     if (!alertDiv) {
         alertDiv = document.createElement('div');
@@ -2627,31 +2653,42 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         alertDiv.style.margin = '5px 0 10px 0';
         alertDiv.style.padding = '8px 12px';
         alertDiv.style.borderRadius = '4px';
-        alertDiv.style.backgroundColor = '#f8f9fa';
         alertDiv.style.fontSize = '0.9em';
         alertDiv.style.border = '1px solid #ddd';
-        // إدراج العنصر بعد الـ Canvas مباشرة
         canvas.parentNode.insertBefore(alertDiv, canvas.nextSibling);
     }
 
     // تحديث محتوى التنبيهات
+    let allAlerts = [];
+
+    // تنبيهات ±3σ
     if (outOfControl.length > 0) {
-        let alertHtml = `<span style="color:#e74c3c; font-weight:bold;">⚠️ Out of Control Points:</span> `;
         outOfControl.forEach(p => {
-            alertHtml += `<span style="background:#fde0e0; padding:2px 8px; margin:2px; border-radius:4px; display:inline-block; border:1px solid #e74c3c;">${p.label}: ${p.value.toFixed(1)} (exceeds ${p.limit})</span> `;
+            allAlerts.push(`🔴 ${p.label}: ${p.value.toFixed(1)} exceeds ${p.limit}`);
         });
-        alertDiv.innerHTML = alertHtml;
+    }
+
+    // تنبيهات القواعد الإضافية
+    if (alerts.length > 0) {
+        // إزالة التكرارات باستخدام Set
+        const uniqueAlerts = [...new Set(alerts)];
+        allAlerts = allAlerts.concat(uniqueAlerts);
+    }
+
+    if (allAlerts.length > 0) {
+        alertDiv.innerHTML = `<span style="font-weight:bold;">⚠️ Alerts:</span> ` + 
+            allAlerts.map(a => `<span style="background:#fde0e0; padding:2px 8px; margin:2px; border-radius:4px; display:inline-block; border:1px solid #e74c3c;">${a}</span>`).join(' ');
         alertDiv.style.display = 'block';
         alertDiv.style.backgroundColor = '#fff5f5';
         alertDiv.style.borderColor = '#e74c3c';
     } else {
-        alertDiv.innerHTML = '✅ All points within control limits.';
+        alertDiv.innerHTML = '✅ All processes are in control (No WECO rules violated).';
         alertDiv.style.display = 'block';
         alertDiv.style.backgroundColor = '#f0faf0';
         alertDiv.style.borderColor = '#27ae60';
     }
 
-    // بناء Datasets الخاصة بالمخطط
+    // --- بناء Datasets للمخطط (بما فيها خطوط ±1σ و ±2σ) ---
     const datasets = [
         {
             label: label,
@@ -2665,26 +2702,70 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             pointRadius: 5,
             pointHoverRadius: 7,
         },
+        // خطوط ±3σ (UCL / LCL) - باللون الأحمر
         {
-            label: 'UCL (Mean + 3σ)',
+            label: 'UCL (+3σ)',
             data: Array(labels.length).fill(ucl),
             borderColor: '#e74c3c',
-            borderDash: [5, 5],
+            borderDash: [8, 4],
             backgroundColor: 'transparent',
             pointRadius: 0,
             fill: false,
             borderWidth: 2,
         },
         {
-            label: 'LCL (Mean - 3σ)',
+            label: 'LCL (-3σ)',
             data: Array(labels.length).fill(lcl),
             borderColor: '#e74c3c',
-            borderDash: [5, 5],
+            borderDash: [8, 4],
             backgroundColor: 'transparent',
             pointRadius: 0,
             fill: false,
             borderWidth: 2,
         },
+        // خطوط ±2σ - باللون البرتقالي
+        {
+            label: '+2σ Zone',
+            data: Array(labels.length).fill(twoSigmaUp),
+            borderColor: '#f39c12',
+            borderDash: [4, 4],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 1.5,
+        },
+        {
+            label: '-2σ Zone',
+            data: Array(labels.length).fill(twoSigmaDown),
+            borderColor: '#f39c12',
+            borderDash: [4, 4],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 1.5,
+        },
+        // خطوط ±1σ - باللون الرمادي/الأزرق الفاتح
+        {
+            label: '+1σ Zone',
+            data: Array(labels.length).fill(oneSigmaUp),
+            borderColor: '#95a5a6',
+            borderDash: [2, 3],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 1,
+        },
+        {
+            label: '-1σ Zone',
+            data: Array(labels.length).fill(oneSigmaDown),
+            borderColor: '#95a5a6',
+            borderDash: [2, 3],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 1,
+        },
+        // خط المتوسط (Mean) - باللون الأسود الداكن
         {
             label: 'Mean',
             data: Array(labels.length).fill(mean),
@@ -2709,7 +2790,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
                         label: function(context) {
                             const label = context.dataset.label || '';
                             const value = context.raw;
-                            if (label === 'UCL' || label === 'LCL' || label === 'Mean') {
+                            if (label.includes('σ') || label === 'Mean') {
                                 return `${label}: ${value.toFixed(1)}`;
                             }
                             const idx = context.dataIndex;
@@ -2725,6 +2806,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
                     labels: {
                         usePointStyle: true,
                         boxWidth: 12,
+                        font: { size: 10 }
                     }
                 }
             },
@@ -2740,6 +2822,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         }
     });
 }
+
 // ==================== UPDATED renderHistoricalAnalyticsView ====================
 async function renderHistoricalAnalyticsView() {
     const container = document.getElementById('historical-analytics-view');
