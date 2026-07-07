@@ -2177,14 +2177,36 @@ function renderFilteredCharts(historicalData, selectedArea) {
         return;
     }
     document.getElementById('filteredChartsMessage').innerText = `Showing detailed trends for: ${selectedArea}`;
-    
+
+    // ---- إضافة عناصر التنبيهات للمخططات المفلترة ----
+    ['filteredEvChart', 'filteredRwChart', 'filteredCtChart'].forEach(id => {
+        let div = document.getElementById(id + 'Alerts');
+        if (!div) {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                div = document.createElement('div');
+                div.id = id + 'Alerts';
+                div.style.margin = '5px 0 10px 0';
+                div.style.padding = '8px 12px';
+                div.style.borderRadius = '4px';
+                div.style.backgroundColor = '#f8f9fa';
+                div.style.fontSize = '0.9em';
+                div.style.border = '1px solid #ddd';
+                canvas.parentNode.insertBefore(div, canvas.nextSibling);
+            }
+        }
+    });
+
+    // ---- Control Charts للمنطقة المختارة ----
     const evData = metricsByIteration.map(m => m.effortVariance);
-    renderLineChart('filteredEvChart', labels, evData, 'Effort Variance %', '#f39c12', 'Variance %');
-    const rwData = metricsByIteration.map(m => m.reworkRatio);
-    renderLineChart('filteredRwChart', labels, rwData, 'Rework Ratio %', '#e67e22', 'Rework %');
-    const ctData = metricsByIteration.map(m => m.avgCycleTime);
-    renderLineChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days');
+    renderControlChart('filteredEvChart', labels, evData, 'Effort Variance %', '#f39c12', 'Variance %');
     
+    const rwData = metricsByIteration.map(m => m.reworkRatio);
+    renderControlChart('filteredRwChart', labels, rwData, 'Rework Ratio %', '#e67e22', 'Rework %');
+    
+    const ctData = metricsByIteration.map(m => m.avgCycleTime);
+    renderControlChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days');
+
     // Workload with Meeting dashed lines
     const devWorkloadSolid = metricsByIteration.map(m => m.avgDevHours || 0);
     const devWorkloadIncl = metricsByIteration.map(m => m.avgDevHoursInclMeetings || 0);
@@ -2201,7 +2223,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
         { label: 'DB Specialists (avg hours)', data: dbWorkloadSolid, borderColor: '#8e44ad', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#8e44ad' },
         { label: 'DB Specialists + Meeting (avg hours)', data: dbWorkloadIncl, borderColor: '#8e44ad', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#8e44ad', borderDash: [5,5] }
     ], 'Hours per Resource');
-    
+
     // Resource distribution chart with names
     const devCounts = metricsByIteration.map(m => m.devCount || 0);
     const testerCounts = metricsByIteration.map(m => m.testerCount || 0);
@@ -2214,7 +2236,8 @@ function renderFilteredCharts(historicalData, selectedArea) {
         { label: 'Testers', data: testerCounts, backgroundColor: '#27ae60' },
         { label: 'DB Specialists', data: dbCounts, backgroundColor: '#8e44ad' }
     ], 'Headcount', { developers: devNamesList, testers: testerNamesList, db: dbNamesList });
-    
+
+    // Bug severity distribution
     const severityCritical = metricsByIteration.map(m => m.bugSeverity?.critical || 0);
     const severityHigh = metricsByIteration.map(m => m.bugSeverity?.high || 0);
     const severityMedium = metricsByIteration.map(m => m.bugSeverity?.medium || 0);
@@ -2225,7 +2248,8 @@ function renderFilteredCharts(historicalData, selectedArea) {
         { label: 'Medium', data: severityMedium, backgroundColor: '#f1c40f' },
         { label: 'Low', data: severityLow, backgroundColor: '#2ecc71' }
     ], 'Bug Severity');
-    
+
+    // Bug type distribution
     const genericBugs = metricsByIteration.map(m => m.bugTypeCount?.generic || 0);
     const specificBugs = metricsByIteration.map(m => m.bugTypeCount?.specific || 0);
     renderStackedPercentageBar('filteredBugTypeChart', labels, [
@@ -2233,7 +2257,6 @@ function renderFilteredCharts(historicalData, selectedArea) {
         { label: 'Specific Bugs', data: specificBugs, backgroundColor: '#3498db' }
     ], 'Bug Type');
 }
-
 async function syncAllIterationsData() {
     if (!azureConfigs || azureConfigs.length === 0) {
         alert("No Azure iterations configured. Please add queries in Azure Config first.");
@@ -2498,6 +2521,174 @@ function buildHeatmapTable(data) {
     return html;
 }
 
+// ==================== CONTROL CHART HELPERS ====================
+
+/**
+ * حساب المتوسط والانحراف المعياري وحدود التحكم (UCL, LCL)
+ * UCL = Mean + 3 * StdDev
+ * LCL = Mean - 3 * StdDev
+ */
+function calculateControlLimits(data) {
+    const n = data.length;
+    if (n === 0) return { mean: 0, ucl: 0, lcl: 0 };
+    const mean = data.reduce((a, b) => a + b, 0) / n;
+    const std = Math.sqrt(data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n);
+    const ucl = mean + 3 * std;
+    const lcl = mean - 3 * std;
+    return { mean, ucl, lcl };
+}
+
+/**
+ * رسم مخطط تحكم (Control Chart) باستخدام Chart.js
+ * - خط البيانات مع تلوين النقاط الخارجة باللون الأحمر
+ * - خطوط UCL, LCL, Mean (متقطعة)
+ * - عرض التنبيهات في عنصر HTML يحمل id = canvasId + 'Alerts'
+ */
+function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // تدمير الرسم السابق إن وجد
+    if (window[canvasId + 'Chart']) {
+        window[canvasId + 'Chart'].destroy();
+        delete window[canvasId + 'Chart'];
+    }
+
+    const { mean, ucl, lcl } = calculateControlLimits(data);
+
+    // تحديد النقاط الخارجة عن الحدود
+    const pointColors = data.map(val => (val > ucl || val < lcl) ? '#e74c3c' : color);
+
+    // تجميع النقاط الخارجة للتنبيه
+    const outOfControl = [];
+    data.forEach((val, i) => {
+        if (val > ucl || val < lcl) {
+            outOfControl.push({ label: labels[i], value: val, limit: val > ucl ? 'UCL' : 'LCL' });
+        }
+    });
+
+    // إنشاء عنصر التنبيهات إذا لم يكن موجوداً
+    let alertDiv = document.getElementById(canvasId + 'Alerts');
+    if (!alertDiv) {
+        alertDiv = document.createElement('div');
+        alertDiv.id = canvasId + 'Alerts';
+        alertDiv.style.margin = '5px 0 10px 0';
+        alertDiv.style.padding = '8px 12px';
+        alertDiv.style.borderRadius = '4px';
+        alertDiv.style.backgroundColor = '#f8f9fa';
+        alertDiv.style.fontSize = '0.9em';
+        alertDiv.style.border = '1px solid #ddd';
+        // إدراج العنصر بعد الـ Canvas مباشرة
+        canvas.parentNode.insertBefore(alertDiv, canvas.nextSibling);
+    }
+
+    // تحديث محتوى التنبيهات
+    if (outOfControl.length > 0) {
+        let alertHtml = `<span style="color:#e74c3c; font-weight:bold;">⚠️ Out of Control Points:</span> `;
+        outOfControl.forEach(p => {
+            alertHtml += `<span style="background:#fde0e0; padding:2px 8px; margin:2px; border-radius:4px; display:inline-block; border:1px solid #e74c3c;">${p.label}: ${p.value.toFixed(1)} (exceeds ${p.limit})</span> `;
+        });
+        alertDiv.innerHTML = alertHtml;
+        alertDiv.style.display = 'block';
+        alertDiv.style.backgroundColor = '#fff5f5';
+        alertDiv.style.borderColor = '#e74c3c';
+    } else {
+        alertDiv.innerHTML = '✅ All points within control limits.';
+        alertDiv.style.display = 'block';
+        alertDiv.style.backgroundColor = '#f0faf0';
+        alertDiv.style.borderColor = '#27ae60';
+    }
+
+    // بناء Datasets الخاصة بالمخطط
+    const datasets = [
+        {
+            label: label,
+            data: data,
+            borderColor: color,
+            backgroundColor: color + '33',
+            tension: 0.3,
+            fill: false,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointColors,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+        },
+        {
+            label: 'UCL (Mean + 3σ)',
+            data: Array(labels.length).fill(ucl),
+            borderColor: '#e74c3c',
+            borderDash: [5, 5],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 2,
+        },
+        {
+            label: 'LCL (Mean - 3σ)',
+            data: Array(labels.length).fill(lcl),
+            borderColor: '#e74c3c',
+            borderDash: [5, 5],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 2,
+        },
+        {
+            label: 'Mean',
+            data: Array(labels.length).fill(mean),
+            borderColor: '#2c3e50',
+            borderDash: [2, 2],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 1.5,
+        }
+    ];
+
+    window[canvasId + 'Chart'] = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.raw;
+                            if (label === 'UCL' || label === 'LCL' || label === 'Mean') {
+                                return `${label}: ${value.toFixed(1)}`;
+                            }
+                            const idx = context.dataIndex;
+                            const isOut = data[idx] > ucl || data[idx] < lcl;
+                            if (isOut) {
+                                return `${label}: ${value.toFixed(1)} ⚠️ Out of Control`;
+                            }
+                            return `${label}: ${value.toFixed(1)}`;
+                        }
+                    }
+                },
+                legend: {
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 12,
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    title: { display: !!yLabel, text: yLabel, font: { weight: 'bold' } },
+                    grid: { color: '#f0f0f0' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
 // ==================== UPDATED renderHistoricalAnalyticsView ====================
 async function renderHistoricalAnalyticsView() {
     const container = document.getElementById('historical-analytics-view');
@@ -2526,12 +2717,31 @@ async function renderHistoricalAnalyticsView() {
 
     const labels = historicalData.map(d => d.iterationName);
 
-    // ---- Overall charts (always shown) ----
-    renderLineChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %');
-    renderLineChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %');
-    renderLineChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days');
+    // ---- إضافة عناصر التنبيهات ديناميكياً (إن لم تكن موجودة) ----
+    ['evLineChart', 'rwLineChart', 'ctLineChart'].forEach(id => {
+        let div = document.getElementById(id + 'Alerts');
+        if (!div) {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                div = document.createElement('div');
+                div.id = id + 'Alerts';
+                div.style.margin = '5px 0 10px 0';
+                div.style.padding = '8px 12px';
+                div.style.borderRadius = '4px';
+                div.style.backgroundColor = '#f8f9fa';
+                div.style.fontSize = '0.9em';
+                div.style.border = '1px solid #ddd';
+                canvas.parentNode.insertBefore(div, canvas.nextSibling);
+            }
+        }
+    });
 
-    // Multi-line workload chart (Dev, Tester, DB) with meetings as dashed
+    // ---- Overall Control Charts (always shown) ----
+    renderControlChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %');
+    renderControlChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %');
+    renderControlChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days');
+
+    // ---- Multi-line workload chart (Dev, Tester, DB) with meetings as dashed ----
     const devWorkloadSolid = historicalData.map(d => d.avgDevHours || 0);
     const devWorkloadIncl = historicalData.map(d => d.avgDevHoursInclMeetings || 0);
     const testWorkloadSolid = historicalData.map(d => d.avgTestHours || 0);
@@ -2624,7 +2834,10 @@ async function renderHistoricalAnalyticsView() {
         const msgDiv = document.getElementById('filteredChartsMessage');
         if (msgDiv) msgDiv.innerText = '';
         ['filteredEvChart','filteredRwChart','filteredCtChart','filteredAvgWorkloadChart','filteredResourceDistChart','filteredBugSeverityChart','filteredBugTypeChart'].forEach(id => {
-            if (window[id+'Chart']) window[id+'Chart'].destroy();
+            if (window[id+'Chart']) {
+                window[id+'Chart'].destroy();
+                delete window[id+'Chart'];
+            }
         });
     }
 
@@ -2646,7 +2859,7 @@ async function renderHistoricalAnalyticsView() {
             <td style="text-align:center;">${d.uniqueResourcesCount || 0}</td>
            </tr>`;
     });
-    tableHtml += `</tbody>table</div>`;
+    tableHtml += `</tbody></table>`;
     let existingTable = document.getElementById('historicalSummaryTable');
     if (!existingTable) {
         existingTable = document.createElement('div');
@@ -2690,7 +2903,6 @@ async function renderHistoricalAnalyticsView() {
     }
 
     // ========== HEATMAP SECTION ==========
-    
     let heatmapContainer = document.getElementById('heatmapContainer');
     if (!heatmapContainer) {
         heatmapContainer = document.createElement('div');
@@ -2703,7 +2915,6 @@ async function renderHistoricalAnalyticsView() {
     let heatmapData = [];
     const areaForHeatmap = document.getElementById('businessAreaSelect')?.value || '';
     if (areaForHeatmap) {
-        // Use business area specific metrics
         historicalData.forEach(iter => {
             const ba = iter.businessMetrics?.find(b => b.area === areaForHeatmap);
             if (ba) {
@@ -2711,34 +2922,29 @@ async function renderHistoricalAnalyticsView() {
                     iteration: iter.iterationName,
                     CT: ba.avgCycleTime || 0,
                     RW: ba.reworkRatio || 0,
-                    EV: ba.effortVariance || 0,    // القيمة الأصلية للعرض
+                    EV: ba.effortVariance || 0,
                     Bugs: ba.internalBugs || 0
                 });
             }
         });
     } else {
-        // Use overall metrics
         heatmapData = historicalData.map(iter => ({
             iteration: iter.iterationName,
             CT: iter.avgCycleTime || 0,
             RW: iter.reworkRatio || 0,
-            EV: iter.effortVariance || 0,       // القيمة الأصلية للعرض
+            EV: iter.effortVariance || 0,
             Bugs: iter.internalBugs || 0
         }));
     }
 
-    // ====== الحل الجديد: حساب الألوان يدوياً مع معالجة خاصة لـ EV ======
     let heatmapHtml = `<h3 style="color: #2c3e50; border-left: 6px solid #e74c3c; padding-left: 15px; margin-top: 10px;">🔥 Heatmap of Key Metrics ${areaForHeatmap ? `(${areaForHeatmap})` : '(Overall)'}</h3>`;
     
     if (heatmapData.length > 0) {
-        // 1. حساب المدى (Min/Max) لكل مقياس
-        // ولكن بالنسبة لـ EV، سنحسب المدى على أساس "القيمة المطلقة" (Abs)
         const allCT = heatmapData.map(d => d.CT);
         const allRW = heatmapData.map(d => d.RW);
         const allEV = heatmapData.map(d => d.EV);
         const allBugs = heatmapData.map(d => d.Bugs);
         
-        // حساب القيم المطلقة لـ EV لإيجاد المدى
         const allAbsEV = allEV.map(v => Math.abs(v));
         const minEV = Math.min(...allAbsEV);
         const maxEV = Math.max(...allAbsEV);
@@ -2750,29 +2956,24 @@ async function renderHistoricalAnalyticsView() {
         const minBugs = Math.min(...allBugs);
         const maxBugs = Math.max(...allBugs);
 
-        // دالة مساعدة لتوليد اللون (تُستخدم لكل المقاييس ما عدا EV)
         const getColor = (value, min, max) => {
-            if (max === min) return '#2ecc71'; // لون محايد أخضر
-            // منع القيم السالبة من كسر النسبة (للمقاييس الأخرى التي قد تكون سالبة نظرياً)
+            if (max === min) return '#2ecc71';
             const ratio = Math.max(0, Math.min(1, (value - min) / (max - min)));
             const r = Math.round(255 * ratio);
             const g = Math.round(255 * (1 - ratio));
             return `rgb(${r}, ${g}, 80)`;
         };
 
-        // دالة خاصة لتوليد لون EV بناءً على القيمة المطلقة (Abs)
         const getEVColor = (value) => {
             const absVal = Math.abs(value);
             if (maxEV === minEV) return '#2ecc71';
-            // النسبة: كلما زادت القيمة المطلقة، زادت النسبة (أحمر)
             const ratio = Math.max(0, Math.min(1, (absVal - minEV) / (maxEV - minEV)));
             const r = Math.round(255 * ratio);
             const g = Math.round(255 * (1 - ratio));
             return `rgb(${r}, ${g}, 80)`;
         };
 
-        // بداية بناء الجدول
-        let tableHtml = `
+        let tableHtml2 = `
         <div style="overflow-x:auto; margin-top:20px;">
             <table style="width:100%; border-collapse:collapse; font-size:0.95em; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden;">
                 <thead>
@@ -2792,7 +2993,6 @@ async function renderHistoricalAnalyticsView() {
             const evColor = getEVColor(row.EV);
             const bugsColor = getColor(row.Bugs, minBugs, maxBugs);
 
-            // تحديد لون النص بناءً على شدة اللون (تحسين القراءة)
             const getTextColor = (val, min, max) => {
                 if (max === min) return '#2c3e50';
                 const ratio = (val - min) / (max - min);
@@ -2805,18 +3005,17 @@ async function renderHistoricalAnalyticsView() {
                 return ratio > 0.5 ? 'white' : '#2c3e50';
             };
 
-            tableHtml += `<tr>`;
-            tableHtml += `<td style="padding:12px; text-align:center; font-weight:600; background:#f8f9fa;">${row.iteration}</td>`;
-            tableHtml += `<td style="padding:12px; text-align:center; background-color:${ctColor}; color:${getTextColor(row.CT, minCT, maxCT)}; font-weight:bold; cursor:help;" title="CT: ${row.CT.toFixed(1)} days">${row.CT.toFixed(1)}</td>`;
-            tableHtml += `<td style="padding:12px; text-align:center; background-color:${rwColor}; color:${getTextColor(row.RW, minRW, maxRW)}; font-weight:bold; cursor:help;" title="RW: ${row.RW.toFixed(1)}%">${row.RW.toFixed(1)}%</td>`;
-            // عمود EV باستخدام الدالة الخاصة
-            tableHtml += `<td style="padding:12px; text-align:center; background-color:${evColor}; color:${getEVTextColor(row.EV)}; font-weight:bold; cursor:help;" title="EV: ${row.EV.toFixed(1)}% (Closer to 0 is better)">${row.EV.toFixed(1)}%</td>`;
-            tableHtml += `<td style="padding:12px; text-align:center; background-color:${bugsColor}; color:${getTextColor(row.Bugs, minBugs, maxBugs)}; font-weight:bold; cursor:help;" title="Bugs: ${row.Bugs}">${row.Bugs}</td>`;
-            tableHtml += `</tr>`;
+            tableHtml2 += `<tr>`;
+            tableHtml2 += `<td style="padding:12px; text-align:center; font-weight:600; background:#f8f9fa;">${row.iteration}</td>`;
+            tableHtml2 += `<td style="padding:12px; text-align:center; background-color:${ctColor}; color:${getTextColor(row.CT, minCT, maxCT)}; font-weight:bold; cursor:help;" title="CT: ${row.CT.toFixed(1)} days">${row.CT.toFixed(1)}</td>`;
+            tableHtml2 += `<td style="padding:12px; text-align:center; background-color:${rwColor}; color:${getTextColor(row.RW, minRW, maxRW)}; font-weight:bold; cursor:help;" title="RW: ${row.RW.toFixed(1)}%">${row.RW.toFixed(1)}%</td>`;
+            tableHtml2 += `<td style="padding:12px; text-align:center; background-color:${evColor}; color:${getEVTextColor(row.EV)}; font-weight:bold; cursor:help;" title="EV: ${row.EV.toFixed(1)}% (Closer to 0 is better)">${row.EV.toFixed(1)}%</td>`;
+            tableHtml2 += `<td style="padding:12px; text-align:center; background-color:${bugsColor}; color:${getTextColor(row.Bugs, minBugs, maxBugs)}; font-weight:bold; cursor:help;" title="Bugs: ${row.Bugs}">${row.Bugs}</td>`;
+            tableHtml2 += `</tr>`;
         });
 
-        tableHtml += `</tbody>table</div>`;
-        heatmapHtml += tableHtml;
+        tableHtml2 += `</tbody></table></div>`;
+        heatmapHtml += tableHtml2;
     } else {
         heatmapHtml += `<p style="color: #7f8c8d;">No data available for the selected area.</p>`;
     }
