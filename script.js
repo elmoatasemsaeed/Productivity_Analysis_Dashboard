@@ -2521,20 +2521,71 @@ function buildHeatmapTable(data) {
     return html;
 }
 
-// ==================== CONTROL CHART HELPERS ====================
-
+// ==================== CONTROL LIMITS USING MOVING RANGE (METHOD 1) ====================
 /**
- * حساب المتوسط والانحراف المعياري وحدود التحكم (UCL, LCL)
- * UCL = Mean + 3 * StdDev
- * LCL = Mean - 3 * StdDev
+ * حساب حدود التحكم (UCL, LCL) باستخدام طريقة المدى المتحرك (Moving Range)
+ * هذه الطريقة أكثر مقاومة للقيم المتطرفة (Outliers) لأنها تعتمد على التغير بين النقاط المتتالية
+ * بدلاً من الانحراف المعياري العام الذي يتأثر بالقيم الشاذة.
+ * 
+ * المعادلات المستخدمة:
+ * - Mean = متوسط جميع القيم
+ * - MR = |x(i) - x(i-1)|  (المدى بين كل نقطة والتي تسبقها)
+ * - MR_bar = متوسط جميع قيم MR
+ * - Sigma_est = MR_bar / 1.128  (حيث 1.128 هو ثابت d2 لعينة حجمها 2)
+ * - UCL = Mean + 3 * Sigma_est
+ * - LCL = Mean - 3 * Sigma_est
  */
 function calculateControlLimits(data) {
     const n = data.length;
-    if (n === 0) return { mean: 0, ucl: 0, lcl: 0 };
+    
+    // 1. التحقق من صحة البيانات
+    if (!data || n === 0) {
+        return { mean: 0, ucl: 0, lcl: 0 };
+    }
+
+    // 2. حساب المتوسط الحسابي (Mean) - يظل كما هو كخط مركزي
     const mean = data.reduce((a, b) => a + b, 0) / n;
-    const std = Math.sqrt(data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n);
-    const ucl = mean + 3 * std;
-    const lcl = mean - 3 * std;
+
+    // 3. حساب المدى المتحرك (Moving Range) بين كل نقطة والتي تسبقها
+    //    MR = |x(i) - x(i-1)|  for i = 1 to n-1
+    let sumMR = 0;
+    let validMRCount = 0;
+    for (let i = 1; i < n; i++) {
+        const mr = Math.abs(data[i] - data[i - 1]);
+        sumMR += mr;
+        validMRCount++;
+    }
+
+    let sigma;
+    
+    // 4. إذا كان لدينا نقطتان على الأقل (أي يوجد مدى متحرك واحد على الأقل)
+    if (validMRCount > 0) {
+        // متوسط المدى المتحرك
+        const meanMR = sumMR / validMRCount;
+        
+        // تحويل متوسط المدى إلى انحراف معياري تقديري
+        // المعامل 1.128 هو قيمة d2 المستخدمة عند مقارنة نقطتين متتاليتين (n=2)
+        // هذه القيمة مأخوذة من جداول التحكم الإحصائي (SPC Tables)
+        sigma = meanMR / 1.128;
+        
+        // 🔥 معالجة الحالة التي تكون فيها جميع البيانات متساوية (المدى = 0)
+        // لو تركنا sigma = 0، ستصبح UCL = LCL = Mean، وهذا غير منطقي.
+        // لذلك نضع قيمة افتراضية صغيرة جداً تعادل 5% من المتوسط (أو 0.1 إن كان المتوسط صفراً)
+        if (sigma === 0 || !isFinite(sigma)) {
+            sigma = Math.max(0.1, Math.abs(mean) * 0.05);
+        }
+    } else {
+        // 5. حالة خاصة: لدينا نقطة واحدة فقط (لا يمكن حساب مدى متحرك)
+        // نستخدم انحراف معياري تقليدي كحل احتياطي، أو نضع قيمة افتراضية
+        const traditionalSigma = Math.sqrt(data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n);
+        sigma = (traditionalSigma === 0 || !isFinite(traditionalSigma)) ? 0.1 : traditionalSigma;
+    }
+
+    // 6. حساب حدي التحكم العلوي والسفلي
+    const ucl = mean + 3 * sigma;
+    const lcl = mean - 3 * sigma;
+
+    // 7. إرجاع النتائج
     return { mean, ucl, lcl };
 }
 
