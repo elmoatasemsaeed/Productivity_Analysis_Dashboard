@@ -947,6 +947,50 @@ function renderBusinessView() {
     container.innerHTML = html;
 }
 
+const REVIEW_CATEGORIES = {
+    "Validation": ["validation","validate","validator","required","null","empty","mandatory","check","verify","condition","constraint","range"],
+    "Business Logic": ["logic","rule","workflow","business","calculation","formula","process","decision","status","transition"],
+    "Database": ["sql","database","db","table","column","query","entity","repository","dbcontext","migration","index","join","foreign key","primary key","stored procedure","view"],
+    "API & Integration": ["api","endpoint","request","response","json","xml","rest","soap","integration","mapping","serializer","deserializer","contract","interface"],
+    "Architecture": ["service","factory","dependency","inject","architecture","layer","dto","model","controller","manager","handler","provider","adapter","mediator","strategy"],
+    "Performance": ["performance","optimize","optimization","cache","slow","timeout","memory","cpu","parallel","thread","async","await","bulk","batch"],
+    "Security": ["security","permission","role","authentication","authorization","encrypt","decrypt","token","jwt","access","identity"],
+    "UI": ["ui","ux","screen","page","button","layout","css","html","javascript","jquery","frontend","popup","dialog","grid","form"],
+    "Reports": ["report","print","pdf","excel","export","import","dashboard","chart","graph"],
+    "Naming & Standards": ["rename","naming","convention","standard","camel","pascal","coding standard","style","bd001","bd002","bd003","bd004","bd005","bd006","bd007","bd008","bd009","bd010","bd011","bd012","bd013","bd014","bd015","bd016"],
+    "Code Quality": ["refactor","cleanup","clean up","duplicate","duplication","remove","unused","comment","simplify","improve","enhancement","readability","maintainability","complexity","magic number","hardcode","hardcoded"],
+    "Testing": ["unit test","integration test","test","mock","coverage","assert","review report","pull request","pr"]
+};
+
+function classifyReviewTitle(title) {
+    if (!title) return "Code Quality";
+    const text = title.toLowerCase();
+    const scores = {};
+    for (const category in REVIEW_CATEGORIES) {
+        scores[category] = 0;
+        for (const keyword of REVIEW_CATEGORIES[category]) {
+            if (text.includes(keyword)) {
+                scores[category] += keyword.length > 8 ? 2 : 1;
+            }
+        }
+    }
+    let bestCategory = "Code Quality", highestScore = -1;
+    for (const category in scores) {
+        if (scores[category] > highestScore) {
+            highestScore = scores[category];
+            bestCategory = category;
+        }
+    }
+    if (highestScore === 0) {
+        if (text.includes("fix") || text.includes("bug")) return "Code Quality";
+        if (text.includes("review")) return "Code Quality";
+        if (text.includes("create") || text.includes("add")) return "Architecture";
+        if (text.includes("update")) return "Code Quality";
+        return "Code Quality";
+    }
+    return bestCategory;
+}
+
 function renderTeamView() {
     const container = document.getElementById('team-view');
     if (!processedStories || processedStories.length === 0) {
@@ -1020,6 +1064,8 @@ function renderTeamView() {
             bugDistributionByDev: {},
             bugDistributionByStory: {},
             bugSeverityByStory: {},
+            reviewDistributionByStory: {},
+            reviewSeverityByStory: {},
             bugTitles: [],
             bugCategories: [],
             reviewTitles: [],
@@ -1029,7 +1075,6 @@ function renderTeamView() {
             maxCycleTimeStoryId: null,
             maxCycleTimeStoryEst: 0,
             maxCycleTimeStoryRework: 0,
-            // NEW: Test Cases fields
             testCaseTotal: 0,
             testCaseDesign: 0,
             testCaseExecuted: 0,
@@ -1096,6 +1141,23 @@ function renderTeamView() {
                 else if (sev.includes('4 - Low')) stats.bugSeverityByStory[storyId].low++;
             });
 
+            // ---- تتبع الـ Reviews لكل قصة ----
+            const reviewCount = us.reviews ? us.reviews.length : 0;
+            stats.reviewDistributionByStory[storyId] = (stats.reviewDistributionByStory[storyId] || 0) + reviewCount;
+
+            if (!stats.reviewSeverityByStory[storyId]) {
+                stats.reviewSeverityByStory[storyId] = { critical: 0, high: 0, medium: 0, low: 0 };
+            }
+            if (us.reviews) {
+                us.reviews.forEach(r => {
+                    const sev = r['Severity'] || '';
+                    if (sev.includes('1 - Critical')) stats.reviewSeverityByStory[storyId].critical++;
+                    else if (sev.includes('2 - High')) stats.reviewSeverityByStory[storyId].high++;
+                    else if (sev.includes('3 - Medium')) stats.reviewSeverityByStory[storyId].medium++;
+                    else if (sev.includes('4 - Low')) stats.reviewSeverityByStory[storyId].low++;
+                });
+            }
+
             if (us.bugTitles) {
                 stats.bugTitles = stats.bugTitles.concat(us.bugTitles);
                 stats.bugCategories = stats.bugCategories.concat(us.bugCategories || []);
@@ -1106,7 +1168,6 @@ function renderTeamView() {
                 stats.reviewCategories = stats.reviewCategories.concat(us.reviewCategories || []);
             }
 
-            // NEW: Test Cases aggregation
             if (us.testCaseStats) {
                 stats.testCaseTotal += us.testCaseStats.total || 0;
                 stats.testCaseDesign += us.testCaseStats.designCount || 0;
@@ -1257,26 +1318,17 @@ function renderTeamView() {
     container.innerHTML = html;
 }
 
-
 function generateAdvancedQualityAnalysis(s) {
     let insights = [];
-
-    // ===== Helper for info icon (keep) =====
     const infoIcon = (text) => `<span style="cursor:help; font-size:0.8em; color:#888; margin-left:4px;" title="${text}">ⓘ</span>`;
 
-    // ============================================================
-    // 1. Test Cases Execution Coverage (no icon)
-    // ============================================================
+    // Test Cases Execution Coverage
     const tcTotal = s.testCaseTotal || 0;
     const tcDesign = s.testCaseDesign || 0;
     const tcExecuted = s.testCaseExecuted || 0;
     const tcRate = tcTotal > 0 ? (tcExecuted / tcTotal) * 100 : 0;
-
     if (tcTotal > 0) {
-        let tcMsg = `<b>Test Cases Execution Coverage</b> (${tcTotal} total): `;
-        tcMsg += `Design (Not Executed): ${tcDesign} (${((tcDesign/tcTotal)*100).toFixed(1)}%), `;
-        tcMsg += `Executed: ${tcExecuted} (${tcRate.toFixed(1)}%). `;
-
+        let tcMsg = `<b>Test Cases Execution Coverage</b> (${tcTotal} total): Design (Not Executed): ${tcDesign} (${((tcDesign/tcTotal)*100).toFixed(1)}%), Executed: ${tcExecuted} (${tcRate.toFixed(1)}%). `;
         const statusCounts = s.testCaseStatusCounts || {};
         let statusParts = [];
         for (let status in statusCounts) {
@@ -1289,23 +1341,14 @@ function generateAdvancedQualityAnalysis(s) {
         if (statusParts.length) {
             tcMsg += `Distribution: ${statusParts.join(', ')}.`;
         }
-
-        if (tcRate >= 100) {
-            tcMsg += ` ✅ All test cases executed.`;
-        } else if (tcRate >= 90) {
-            tcMsg += ` ✅ High execution rate (≥90%).`;
-        } else if (tcRate >= 70) {
-            tcMsg += ` ⚠️ Moderate execution rate, consider executing remaining tests.`;
-        } else {
-            tcMsg += ` ❌ Low execution rate, need immediate attention.`;
-        }
-
+        if (tcRate >= 100) tcMsg += ` ✅ All test cases executed.`;
+        else if (tcRate >= 90) tcMsg += ` ✅ High execution rate (≥90%).`;
+        else if (tcRate >= 70) tcMsg += ` ⚠️ Moderate execution rate, consider executing remaining tests.`;
+        else tcMsg += ` ❌ Low execution rate, need immediate attention.`;
         insights.push(`<li>${tcMsg}</li>`);
     }
 
-    // ============================================================
-    // 2. Bug Categories
-    // ============================================================
+    // Bug Categories
     if (s.bugCategories && s.bugCategories.length > 0) {
         const categoryCount = {};
         s.bugCategories.forEach(cat => {
@@ -1324,9 +1367,7 @@ function generateAdvancedQualityAnalysis(s) {
         }
     }
 
-    // ============================================================
-    // 3. Bug Severity Distribution (merged with Defect Severity Alert, no threshold mention)
-    // ============================================================
+    // Bug Severity Distribution
     const totalBugs = s.bugsCrit + s.bugsHigh + s.bugsMed + s.bugsLow;
     if (totalBugs > 0) {
         let bugDist = `<b>Bug Severity Distribution</b>: Critical: ${s.bugsCrit} (${((s.bugsCrit/totalBugs)*100).toFixed(1)}%), High: ${s.bugsHigh} (${((s.bugsHigh/totalBugs)*100).toFixed(1)}%), Medium: ${s.bugsMed} (${((s.bugsMed/totalBugs)*100).toFixed(1)}%), Low: ${s.bugsLow} (${((s.bugsLow/totalBugs)*100).toFixed(1)}%)`;
@@ -1341,9 +1382,7 @@ function generateAdvancedQualityAnalysis(s) {
         insights.push(`<li>${bugDist}</li>`);
     }
 
-    // ============================================================
-    // 4. Generic vs Specific Bugs
-    // ============================================================
+    // Generic vs Specific Bugs
     const genericCount = s.genericBugCount || 0;
     const specificCount = s.specificBugCount || 0;
     const totalBugsGenSpec = genericCount + specificCount;
@@ -1354,9 +1393,7 @@ function generateAdvancedQualityAnalysis(s) {
         insights.push(`<li><b>Generic vs Specific Bugs</b> ${infoIcon(explanation)}: Generic: ${genericCount} (${genericRatio.toFixed(1)}%), Specific: ${specificCount} (${specificRatio.toFixed(1)}%).</li>`);
     }
 
-    // ============================================================
-    // 5. Top Story by Total Bugs
-    // ============================================================
+    // Top Story by Total Bugs
     if (s.bugDistributionByStory) {
         const storyIds = Object.keys(s.bugDistributionByStory);
         if (storyIds.length > 0) {
@@ -1373,15 +1410,13 @@ function generateAdvancedQualityAnalysis(s) {
             }
             if (maxStory && maxCount > 0) {
                 const percentage = ((maxCount / totalBugsAllStories) * 100).toFixed(1);
-                const explanation = `Total bugs across all stories = ${totalBugsAllStories}, Story '${maxStory}' has ${maxCount} bugs (${percentage}%)`;
+                const explanation = `Total bugs across all stories = ${totalBugsAllStories}, Story '${maxStory}' has ${maxCount} bugs (${percentage}% of total bugs)`;
                 insights.push(`<li><b>Top Story by Total Bugs</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest bug count with ${maxCount} bugs (${percentage}% of total bugs).</li>`);
             }
         }
     }
 
-    // ============================================================
-    // 6. Top Story by Critical/High Bugs
-    // ============================================================
+    // Top Story by Critical/High Bugs
     if (s.bugSeverityByStory) {
         const storyIds = Object.keys(s.bugSeverityByStory);
         if (storyIds.length > 0) {
@@ -1399,38 +1434,89 @@ function generateAdvancedQualityAnalysis(s) {
             }
             if (maxStory && maxHighCount > 0) {
                 const percentage = ((maxHighCount / totalHighBugsAllStories) * 100).toFixed(1);
-                const explanation = `Total Critical/High bugs across all stories = ${totalHighBugsAllStories}, Story '${maxStory}' has ${maxHighCount} Critical/High bugs (${percentage}%)`;
+                const explanation = `Total Critical/High bugs across all stories = ${totalHighBugsAllStories}, Story '${maxStory}' has ${maxHighCount} Critical/High bugs (${percentage}% of total Critical/High bugs)`;
                 insights.push(`<li><b>Top Story by Critical/High Bugs</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest number of Critical/High bugs (${maxHighCount} bugs, ${percentage}% of total Critical/High bugs).</li>`);
             }
         }
     }
 
-    // ============================================================
-    // 7. Highest Cycle Time Story
-    // ============================================================
-    if (s.maxCycleTimeStoryId && s.maxCycleTime > 0) {
-        const cycleDays = s.maxCycleTime;
-        const estHours = s.maxCycleTimeStoryEst || 0;
-        const reworkHours = s.maxCycleTimeStoryRework || 0;
-        const cycleHours = cycleDays * 5;
-        const estVsCycleRatio = estHours > 0 ? ((cycleHours / estHours) * 100).toFixed(1) : 'N/A';
-        const reworkVsCycleRatio = cycleHours > 0 ? ((reworkHours / cycleHours) * 100).toFixed(1) : 'N/A';
-        const explanation = `Story '${s.maxCycleTimeStoryId}': Cycle Time = ${cycleDays} days (${cycleHours}h), Estimation = ${estHours.toFixed(1)}h, Rework = ${reworkHours.toFixed(1)}h. Cycle/Est = ${estVsCycleRatio}%, Rework/Cycle = ${reworkVsCycleRatio}%.`;
-        insights.push(`<li><b>Highest Cycle Time Story</b> ${infoIcon(explanation)}: Story <b>${s.maxCycleTimeStoryId}</b> has the highest cycle time (${cycleDays} days, ${cycleHours}h). Total Estimation = ${estHours.toFixed(1)}h, Rework = ${reworkHours.toFixed(1)}h. Cycle/Est = ${estVsCycleRatio}%, Rework/Cycle = ${reworkVsCycleRatio}%.</li>`);
+    // ========== NEW REVIEW ANALYTICS ==========
+
+    // Review Categories (using the new scoring-based classification)
+    if (s.reviewCategories && s.reviewCategories.length > 0) {
+        const categoryCount = {};
+        s.reviewCategories.forEach(cat => {
+            categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+        });
+        const total = s.reviewCategories.length;
+        let categoriesStr = '';
+        for (let cat in categoryCount) {
+            const pct = ((categoryCount[cat] / total) * 100).toFixed(1);
+            categoriesStr += `${cat}: ${pct}%, `;
+        }
+        if (categoriesStr.length > 0) {
+            categoriesStr = categoriesStr.slice(0, -2);
+            const explanation = `Based on ${total} review titles, classified by Scoring algorithm (Validation, Business Logic, DB, API, Architecture, Performance, Security, UI, Reports, Naming, Code Quality, Testing)`;
+            insights.push(`<li><b>Review Categories</b> ${infoIcon(explanation)}: ${categoriesStr} (based on ${total} reviews).</li>`);
+        }
     }
 
-    // ============================================================
-    // Now all other analyses (remaining) – in their original order, but we keep them all.
-    // ============================================================
+    // Top Story by Total Reviews
+    if (s.reviewDistributionByStory) {
+        const storyIds = Object.keys(s.reviewDistributionByStory);
+        if (storyIds.length > 0) {
+            let maxStory = null;
+            let maxCount = 0;
+            let totalReviewsAllStories = 0;
+            for (let id in s.reviewDistributionByStory) {
+                const count = s.reviewDistributionByStory[id];
+                totalReviewsAllStories += count;
+                if (count > maxCount) {
+                    maxCount = count;
+                    maxStory = id;
+                }
+            }
+            if (maxStory && maxCount > 0) {
+                const percentage = ((maxCount / totalReviewsAllStories) * 100).toFixed(1);
+                const explanation = `Total reviews across all stories = ${totalReviewsAllStories}, Story '${maxStory}' has ${maxCount} reviews (${percentage}% of total reviews)`;
+                insights.push(`<li><b>Top Story by Total Reviews</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest review count with ${maxCount} reviews (${percentage}% of total reviews).</li>`);
+            }
+        }
+    }
 
-    // ---- Review Severity Distribution (if not already included, but we can add it here) ----
+    // Top Story by Critical/High Reviews
+    if (s.reviewSeverityByStory) {
+        const storyIds = Object.keys(s.reviewSeverityByStory);
+        if (storyIds.length > 0) {
+            let maxStory = null;
+            let maxHighCount = 0;
+            let totalHighReviewsAllStories = 0;
+            for (let id in s.reviewSeverityByStory) {
+                const sev = s.reviewSeverityByStory[id];
+                const highCount = (sev.critical || 0) + (sev.high || 0);
+                totalHighReviewsAllStories += highCount;
+                if (highCount > maxHighCount) {
+                    maxHighCount = highCount;
+                    maxStory = id;
+                }
+            }
+            if (maxStory && maxHighCount > 0) {
+                const percentage = ((maxHighCount / totalHighReviewsAllStories) * 100).toFixed(1);
+                const explanation = `Total Critical/High reviews across all stories = ${totalHighReviewsAllStories}, Story '${maxStory}' has ${maxHighCount} Critical/High reviews (${percentage}% of total Critical/High reviews)`;
+                insights.push(`<li><b>Top Story by Critical/High Reviews</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest number of Critical/High reviews (${maxHighCount} reviews, ${percentage}% of total Critical/High reviews).</li>`);
+            }
+        }
+    }
+
+    // Review Severity Distribution
     const totalReviews = s.revCrit + s.revHigh + s.revMed + s.revLow;
     if (totalReviews > 0) {
         const revDist = `<b>Review Severity Distribution</b>: Critical: ${s.revCrit} (${((s.revCrit/totalReviews)*100).toFixed(1)}%), High: ${s.revHigh} (${((s.revHigh/totalReviews)*100).toFixed(1)}%), Medium: ${s.revMed} (${((s.revMed/totalReviews)*100).toFixed(1)}%), Low: ${s.revLow} (${((s.revLow/totalReviews)*100).toFixed(1)}%)`;
         insights.push(`<li>${revDist}</li>`);
     }
 
-    // ---- Other existing analyses (kept) ----
+    // ========== ORIGINAL ANALYTICS (unchanged) ==========
+
     const totalIssues = s.bugsCount + s.reviewCount;
     const reviewCatchRate = totalIssues > 0 ? (s.reviewCount / totalIssues) * 100 : 0;
     const highSevBugs = s.bugsCrit + s.bugsHigh;
