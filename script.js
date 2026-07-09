@@ -1243,7 +1243,7 @@ function renderTeamView() {
 
             <div style="margin-top:25px; background:#f9f9fb; border-radius:8px; padding:20px; border:1px solid #eccc68; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">
                 <h4 style="margin:0 0 12px 0; color:#ffa502; font-size:1.05em; font-weight:700; display:flex; align-items:center; gap:8px;">
-                    🧠 Defect Analyses
+                    🧠 Execution Analyses
                 </h4>
                 <ul style="margin:0; padding-left:20px; font-size:0.92em; color:#2c3e50; line-height:1.6;">
                     ${generateAdvancedQualityAnalysis(stats)}
@@ -1278,10 +1278,9 @@ function generateAdvancedQualityAnalysis(s) {
 
     const infoIcon = (text) => `<span style="cursor:help; font-size:0.8em; color:#888; margin-left:4px;" title="${text}">ⓘ</span>`;
 
-    // ========== Existing insights (kept) ==========
-    const shiftLeftExplanation = `Reviews / (Bugs + Reviews) * 100 = ${s.reviewCount} / ${totalIssues} * 100 = ${reviewCatchRate.toFixed(1)}%`;
-    insights.push(`<li><b>Shift-Left Strategy Efficiency</b> ${infoIcon(shiftLeftExplanation)}: Peer Reviews intercepted ${reviewCatchRate.toFixed(1)}% of total issues (${s.reviewCount} reviews out of ${totalIssues} total issues).</li>`);
+    // ========== Removed Shift-Left Strategy Efficiency ==========
 
+    // ========== Rework-Driven Slippage etc. (kept) ==========
     if (effortVariance > 15 && combinedReworkRatio > 15) {
         const explanation = `Effort Variance = (Actual - Estimate)/Estimate * 100 = ${((s.totalAct - s.totalEst) / s.totalEst * 100).toFixed(1)}%, Rework Ratio = (ReworkTime+ReviewTime)/Actual * 100 = ${combinedReworkRatio.toFixed(1)}%`;
         insights.push(`<li><b>Rework-Driven Slippage</b> ${infoIcon(explanation)}: Effort Variance is ${effortVariance.toFixed(1)}% and Rework Ratio is ${combinedReworkRatio.toFixed(1)}%.</li>`);
@@ -1298,34 +1297,34 @@ function generateAdvancedQualityAnalysis(s) {
         insights.push(`<li><b>Degraded Quality Shield (Low DRE)</b> ${infoIcon(explanation)}: DRE is ${calculatedDre.toFixed(1)}% with ${s.totalUatBugs} UAT Leakages out of ${totalAllBugsLocal} total defects.</li>`);
     }
 
-    // ========== NEW: Full Severity Distribution for Bugs ==========
+    // ========== Merged Bug Severity Distribution with Defect Severity Alert ==========
     const totalBugs = s.bugsCrit + s.bugsHigh + s.bugsMed + s.bugsLow;
     if (totalBugs > 0) {
-        const bugDist = `Bug Severity Distribution: Critical: ${s.bugsCrit} (${((s.bugsCrit/totalBugs)*100).toFixed(1)}%), High: ${s.bugsHigh} (${((s.bugsHigh/totalBugs)*100).toFixed(1)}%), Medium: ${s.bugsMed} (${((s.bugsMed/totalBugs)*100).toFixed(1)}%), Low: ${s.bugsLow} (${((s.bugsLow/totalBugs)*100).toFixed(1)}%)`;
+        let bugDist = `<b>Bug Severity Distribution</b>: Critical: ${s.bugsCrit} (${((s.bugsCrit/totalBugs)*100).toFixed(1)}%), High: ${s.bugsHigh} (${((s.bugsHigh/totalBugs)*100).toFixed(1)}%), Medium: ${s.bugsMed} (${((s.bugsMed/totalBugs)*100).toFixed(1)}%), Low: ${s.bugsLow} (${((s.bugsLow/totalBugs)*100).toFixed(1)}%)`;
+        // دمج تنبيه Defect Severity Alert
+        if (bugSeverityRatio > 30) {
+            bugDist += ` ⚠️ High/Critical bugs: ${bugSeverityRatio.toFixed(1)}% (exceeds 30% threshold)`;
+            if (highSevReviews === 0 && s.reviewCount > 0) {
+                bugDist += ` — Review Blind Spot: Testing detected ${highSevBugs} High/Critical bugs, while Peer Reviews detected 0.`;
+            }
+        } else {
+            bugDist += ` ✅ High/Critical bugs: ${bugSeverityRatio.toFixed(1)}% (within threshold)`;
+        }
         insights.push(`<li>${bugDist}</li>`);
     }
 
-    // ========== NEW: Full Severity Distribution for Reviews ==========
+    // ========== Review Severity Distribution (with bold label) ==========
     const totalReviews = s.revCrit + s.revHigh + s.revMed + s.revLow;
     if (totalReviews > 0) {
-        const revDist = `Review Severity Distribution: Critical: ${s.revCrit} (${((s.revCrit/totalReviews)*100).toFixed(1)}%), High: ${s.revHigh} (${((s.revHigh/totalReviews)*100).toFixed(1)}%), Medium: ${s.revMed} (${((s.revMed/totalReviews)*100).toFixed(1)}%), Low: ${s.revLow} (${((s.revLow/totalReviews)*100).toFixed(1)}%)`;
+        const revDist = `<b>Review Severity Distribution</b>: Critical: ${s.revCrit} (${((s.revCrit/totalReviews)*100).toFixed(1)}%), High: ${s.revHigh} (${((s.revHigh/totalReviews)*100).toFixed(1)}%), Medium: ${s.revMed} (${((s.revMed/totalReviews)*100).toFixed(1)}%), Low: ${s.revLow} (${((s.revLow/totalReviews)*100).toFixed(1)}%)`;
         insights.push(`<li>${revDist}</li>`);
     }
 
-    // ========== Existing Defect Severity Alert (modified to keep but now we have full distribution above) ==========
-    if (s.bugsCount > 0) {
-        if (bugSeverityRatio > 30) {
-            const explanation = `High/Critical Bugs / Total Bugs * 100 = ${highSevBugs} / ${s.bugsCount} * 100 = ${bugSeverityRatio.toFixed(1)}%`;
-            insights.push(`<li><b>Defect Severity Alert</b> ${infoIcon(explanation)}: High/Critical bugs constitute ${bugSeverityRatio.toFixed(1)}% of total bugs (${highSevBugs} out of ${s.bugsCount} bugs).</li>`);
-            if (highSevReviews === 0) {
-                insights.push(`<li><b>Review Blind Spot Diagnosis</b> ${infoIcon('High/Critical bugs detected by Testing = ' + highSevBugs + ', by Reviews = 0')}: Testing detected ${highSevBugs} High/Critical bugs, while Peer Reviews detected 0.</li>`);
-            }
-        } else {
-            const explanation = `High/Critical Bugs / Total Bugs * 100 = ${bugSeverityRatio.toFixed(1)}%`;
-            insights.push(`<li><b>Defect Profile Stability</b> ${infoIcon(explanation)}: High-severity bugs are ${bugSeverityRatio.toFixed(1)}% of total bugs.</li>`);
-        }
-    }
+    // ========== Removed old Defect Severity Alert and Defect Profile Stability (merged above) ==========
 
+    // ========== Removed High-Severity MTTR ==========
+
+    // ========== Rework Friction (kept) ==========
     if (avgTimePerBug > 4 && s.bugsCount > 0) {
         const explanation = `MTTR = ReworkTime / Bugs = ${s.reworkTime.toFixed(1)}h / ${s.bugsCount} = ${avgTimePerBug.toFixed(1)}h/bug`;
         insights.push(`<li><b>Rework Friction</b> ${infoIcon(explanation)}: Mean Time to Resolve (MTTR) is ${avgTimePerBug.toFixed(1)}h/bug (total rework ${s.reworkTime.toFixed(1)}h / ${s.bugsCount} bugs).</li>`);
@@ -1335,6 +1334,7 @@ function generateAdvancedQualityAnalysis(s) {
         }
     }
 
+    // ========== Review Severity related (kept) ==========
     if (reviewSeverityRatio > 40 && bugSeverityRatio < 15 && s.reviewCount > 0) {
         const explanation = `High-Sev Review = ${reviewSeverityRatio.toFixed(1)}% (${highSevReviews} reviews), High-Sev Testing = ${bugSeverityRatio.toFixed(1)}%`;
         insights.push(`<li><b>High-Fidelity Pre-Emptive Review</b> ${infoIcon(explanation)}: High-Sev Review is ${reviewSeverityRatio.toFixed(1)}%, High-Sev Testing Bugs is ${bugSeverityRatio.toFixed(1)}%.</li>`);
@@ -1345,6 +1345,7 @@ function generateAdvancedQualityAnalysis(s) {
         insights.push(`<li><b>Superficial Peer-Review Pattern</b> ${infoIcon(explanation)}: ${s.reviewCount} Peer Reviews, 0 high-sev issues detected, while Testing high-sev is ${bugSeverityRatio.toFixed(1)}%.</li>`);
     }
 
+    // ========== Hidden Rework (kept) ==========
     if (effortVariance > 25 && combinedReworkRatio < 5 && s.bugsCount > 0) {
         const explanation = `Effort Variance = ${effortVariance.toFixed(1)}%, logged Rework/Review = ${combinedReworkRatio.toFixed(1)}%`;
         insights.push(`<li><b>Hidden Rework & Timesheet Inaccuracy</b> ${infoIcon(explanation)}: Effort Variance is ${effortVariance.toFixed(1)}%, logged Rework/Review is ${combinedReworkRatio.toFixed(1)}%.</li>`);
@@ -1368,7 +1369,7 @@ function generateAdvancedQualityAnalysis(s) {
         }
     }
 
-    // ========== Existing statistical insights ==========
+    // ========== Generic vs Specific Bugs (kept) ==========
     const genericCount = s.genericBugCount || 0;
     const specificCount = s.specificBugCount || 0;
     const totalBugsGenSpec = genericCount + specificCount;
@@ -1379,6 +1380,7 @@ function generateAdvancedQualityAnalysis(s) {
         insights.push(`<li><b>Generic vs Specific Bugs</b> ${infoIcon(explanation)}: Generic: ${genericCount} (${genericRatio.toFixed(1)}%), Specific: ${specificCount} (${specificRatio.toFixed(1)}%).</li>`);
     }
 
+    // ========== Bug Titles Duplicates (kept) ==========
     if (s.bugTitles && s.bugTitles.length > 0) {
         const titleFreq = {};
         s.bugTitles.forEach(title => {
@@ -1393,6 +1395,7 @@ function generateAdvancedQualityAnalysis(s) {
         }
     }
 
+    // ========== Bug Categories (kept) ==========
     if (s.bugCategories && s.bugCategories.length > 0) {
         const categoryCount = {};
         s.bugCategories.forEach(cat => {
@@ -1411,14 +1414,7 @@ function generateAdvancedQualityAnalysis(s) {
         }
     }
 
-    const highSevCount = s.bugsCrit + s.bugsHigh;
-    if (highSevCount > 0 && s.reworkTime > 0) {
-        const avgTimePerHighBug = s.reworkTime / highSevCount;
-        const explanation = `Total rework time = ${s.reworkTime.toFixed(1)}h, High-sev bugs = ${highSevCount}, Avg = ${avgTimePerHighBug.toFixed(1)}h`;
-        insights.push(`<li><b>High-Severity MTTR</b> ${infoIcon(explanation)}: Average resolution time for Critical/High bugs is ${avgTimePerHighBug.toFixed(1)}h (total rework ${s.reworkTime.toFixed(1)}h / ${highSevCount} high-sev bugs).</li>`);
-    }
-
-    // ========== Story-level bug concentration ==========
+    // ========== Story-level bug concentration (kept) ==========
     if (s.bugDistributionByStory) {
         const storyIds = Object.keys(s.bugDistributionByStory);
         if (storyIds.length > 0) {
@@ -1464,7 +1460,7 @@ function generateAdvancedQualityAnalysis(s) {
         }
     }
 
-    // ========== Highest Cycle Time Story ==========
+    // ========== Highest Cycle Time Story (kept) ==========
     if (s.maxCycleTimeStoryId && s.maxCycleTime > 0) {
         const cycleDays = s.maxCycleTime;
         const estHours = s.maxCycleTimeStoryEst || 0;
@@ -1476,14 +1472,14 @@ function generateAdvancedQualityAnalysis(s) {
         insights.push(`<li><b>Highest Cycle Time Story</b> ${infoIcon(explanation)}: Story <b>${s.maxCycleTimeStoryId}</b> has the highest cycle time (${cycleDays} days, ${cycleHours}h). Total Estimation = ${estHours.toFixed(1)}h, Rework = ${reworkHours.toFixed(1)}h. Cycle/Est = ${estVsCycleRatio}%, Rework/Cycle = ${reworkVsCycleRatio}%.</li>`);
     }
 
-    // ========== NEW: Test Cases Analysis ==========
+    // ========== Test Cases Execution Coverage (removed icon) ==========
     const tcTotal = s.testCaseTotal || 0;
     const tcDesign = s.testCaseDesign || 0;
     const tcExecuted = s.testCaseExecuted || 0;
     const tcRate = tcTotal > 0 ? (tcExecuted / tcTotal) * 100 : 0;
 
     if (tcTotal > 0) {
-        let tcMsg = `<li><b>🧪 Test Cases Execution Coverage</b> (${tcTotal} total): `;
+        let tcMsg = `<b>Test Cases Execution Coverage</b> (${tcTotal} total): `;
         tcMsg += `Design (Not Executed): ${tcDesign} (${((tcDesign/tcTotal)*100).toFixed(1)}%), `;
         tcMsg += `Executed: ${tcExecuted} (${tcRate.toFixed(1)}%). `;
 
@@ -1492,7 +1488,7 @@ function generateAdvancedQualityAnalysis(s) {
         let statusParts = [];
         for (let status in statusCounts) {
             const count = statusCounts[status];
-            if (status !== 'Design') {  // Design تم عرضها بالفعل
+            if (status !== 'Design') {
                 const pct = ((count / tcTotal) * 100).toFixed(1);
                 statusParts.push(`${status}: ${count} (${pct}%)`);
             }
@@ -1512,7 +1508,7 @@ function generateAdvancedQualityAnalysis(s) {
             tcMsg += ` ❌ Low execution rate, need immediate attention.`;
         }
 
-        insights.push(tcMsg);
+        insights.push(`<li>${tcMsg}</li>`);
     }
 
     // Fallback if no insights
