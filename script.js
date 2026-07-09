@@ -1302,13 +1302,13 @@ function generateAdvancedQualityAnalysis(s) {
     if (totalBugs > 0) {
         let bugDist = `<b>Bug Severity Distribution</b>: Critical: ${s.bugsCrit} (${((s.bugsCrit/totalBugs)*100).toFixed(1)}%), High: ${s.bugsHigh} (${((s.bugsHigh/totalBugs)*100).toFixed(1)}%), Medium: ${s.bugsMed} (${((s.bugsMed/totalBugs)*100).toFixed(1)}%), Low: ${s.bugsLow} (${((s.bugsLow/totalBugs)*100).toFixed(1)}%)`;
         // دمج تنبيه Defect Severity Alert
-        if (bugSeverityRatio > 30) {
-            bugDist += ` ⚠️ High/Critical bugs: ${bugSeverityRatio.toFixed(1)}% (exceeds 30% threshold)`;
+        if (bugSeverityRatio > 50) {
+            bugDist += ` ⚠️ High/Critical bugs: ${bugSeverityRatio.toFixed(1)}% (exceeds 50%)`;
             if (highSevReviews === 0 && s.reviewCount > 0) {
                 bugDist += ` — Review Blind Spot: Testing detected ${highSevBugs} High/Critical bugs, while Peer Reviews detected 0.`;
             }
         } else {
-            bugDist += ` ✅ High/Critical bugs: ${bugSeverityRatio.toFixed(1)}% (within threshold)`;
+            bugDist += ` ✅ High/Critical bugs: ${bugSeverityRatio.toFixed(1)}% (within 50%)`;
         }
         insights.push(`<li>${bugDist}</li>`);
     }
