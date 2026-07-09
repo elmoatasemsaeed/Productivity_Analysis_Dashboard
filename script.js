@@ -1258,7 +1258,6 @@ function renderTeamView() {
 }
 
 
-// ==================== generateAdvancedQualityAnalysis (بعد الدمج) ====================
 function generateAdvancedQualityAnalysis(s) {
     let insights = [];
 
@@ -1299,6 +1298,21 @@ function generateAdvancedQualityAnalysis(s) {
         insights.push(`<li><b>Degraded Quality Shield (Low DRE)</b> ${infoIcon(explanation)}: DRE is ${calculatedDre.toFixed(1)}% with ${s.totalUatBugs} UAT Leakages out of ${totalAllBugsLocal} total defects.</li>`);
     }
 
+    // ========== NEW: Full Severity Distribution for Bugs ==========
+    const totalBugs = s.bugsCrit + s.bugsHigh + s.bugsMed + s.bugsLow;
+    if (totalBugs > 0) {
+        const bugDist = `Bug Severity Distribution: Critical: ${s.bugsCrit} (${((s.bugsCrit/totalBugs)*100).toFixed(1)}%), High: ${s.bugsHigh} (${((s.bugsHigh/totalBugs)*100).toFixed(1)}%), Medium: ${s.bugsMed} (${((s.bugsMed/totalBugs)*100).toFixed(1)}%), Low: ${s.bugsLow} (${((s.bugsLow/totalBugs)*100).toFixed(1)}%)`;
+        insights.push(`<li>${bugDist}</li>`);
+    }
+
+    // ========== NEW: Full Severity Distribution for Reviews ==========
+    const totalReviews = s.revCrit + s.revHigh + s.revMed + s.revLow;
+    if (totalReviews > 0) {
+        const revDist = `Review Severity Distribution: Critical: ${s.revCrit} (${((s.revCrit/totalReviews)*100).toFixed(1)}%), High: ${s.revHigh} (${((s.revHigh/totalReviews)*100).toFixed(1)}%), Medium: ${s.revMed} (${((s.revMed/totalReviews)*100).toFixed(1)}%), Low: ${s.revLow} (${((s.revLow/totalReviews)*100).toFixed(1)}%)`;
+        insights.push(`<li>${revDist}</li>`);
+    }
+
+    // ========== Existing Defect Severity Alert (modified to keep but now we have full distribution above) ==========
     if (s.bugsCount > 0) {
         if (bugSeverityRatio > 30) {
             const explanation = `High/Critical Bugs / Total Bugs * 100 = ${highSevBugs} / ${s.bugsCount} * 100 = ${bugSeverityRatio.toFixed(1)}%`;
