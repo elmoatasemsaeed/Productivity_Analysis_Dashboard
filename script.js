@@ -259,7 +259,7 @@ function classifyReviewTitle(title) {
     return 'Other';
 }
 
-function calculateMetrics() {
+ffunction calculateMetrics() {
     processedStories = [];
     let currentStory = null;
 
@@ -278,13 +278,15 @@ function calculateMetrics() {
                 status: row['State'],
                 tasks: [],
                 bugs: [],
-                reviews: []
+                reviews: [],
+                testCases: []      // ← جديد
             };
             processedStories.push(currentStory);
         } else if (currentStory) {
             if (type === 'Task') currentStory.tasks.push(row);
-            if (type === 'Bug') currentStory.bugs.push(row);
-            if (type === 'Review') currentStory.reviews.push(row);
+            else if (type === 'Bug') currentStory.bugs.push(row);
+            else if (type === 'Review') currentStory.reviews.push(row);
+            else if (type === 'Test Case') currentStory.testCases.push(row);  // ← جديد
         }
     });
 
