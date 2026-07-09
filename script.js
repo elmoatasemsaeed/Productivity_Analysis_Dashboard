@@ -259,7 +259,7 @@ function classifyReviewTitle(title) {
     return 'Other';
 }
 
-ffunction calculateMetrics() {
+function calculateMetrics() {
     processedStories = [];
     let currentStory = null;
 
