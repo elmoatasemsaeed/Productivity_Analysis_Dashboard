@@ -242,15 +242,6 @@ function processData() {
 
     calculateMetrics();
 }
-// ========== Helper Classification Functions ==========
-function classifyBugTitle(title) {
-    const t = title.toLowerCase();
-    if (t.includes('ui') || t.includes('design') || t.includes('screen') || t.includes('button') || t.includes('layout')) return 'UI';
-    if (t.includes('db') || t.includes('data') || t.includes('sql') || t.includes('table') || t.includes('column')) return 'DB';
-    if (t.includes('perform') || t.includes('slow') || t.includes('timeout') || t.includes('load')) return 'Performance';
-    if (t.includes('logic') || t.includes('rule') || t.includes('calculation') || t.includes('business')) return 'Logic';
-    return 'Other';
-}
 
 function classifyReviewTitle(title) {
     const t = title.toLowerCase();
@@ -279,33 +270,33 @@ function calculateMetrics() {
                 tasks: [],
                 bugs: [],
                 reviews: [],
-                testCases: []      // ← جديد
+                testCases: []
             };
             processedStories.push(currentStory);
         } else if (currentStory) {
             if (type === 'Task') currentStory.tasks.push(row);
             else if (type === 'Bug') currentStory.bugs.push(row);
             else if (type === 'Review') currentStory.reviews.push(row);
-            else if (type === 'Test Case') currentStory.testCases.push(row);  // ← جديد
+            else if (type === 'Test Case') currentStory.testCases.push(row);
         }
     });
 
     // --- Process each story with enhanced metrics ---
-     processedStories.forEach(us => {
+    processedStories.forEach(us => {
         let devOrig = 0, devActual = 0, testOrig = 0, testActual = 0;
-        let dbOrig = 0, dbActual = 0, dbNames = new Set(); 
+        let dbOrig = 0, dbActual = 0, dbNames = new Set();
 
-        // 1. Task calculations (Development, Testing, DB)
+        // 1. Task calculations
         us.tasks.forEach(t => {
             const orig = parseFloat(t['Original Estimation']) || 0;
-            const actDev = parseFloat(t['TimeSheet_DevActualTime']) || 0; 
+            const actDev = parseFloat(t['TimeSheet_DevActualTime']) || 0;
             const actTest = parseFloat(t['TimeSheet_TestingActualTime']) || 0;
             const activity = t['Activity'];
 
             if (activity === 'DB Modification') {
                 dbOrig += orig;
-                dbActual += actDev; 
-                if (t['Assigned To']) dbNames.add(t['Assigned To']); 
+                dbActual += actDev;
+                if (t['Assigned To']) dbNames.add(t['Assigned To']);
             } else if (activity === 'Development') {
                 devOrig += orig;
                 devActual += actDev;
@@ -315,9 +306,9 @@ function calculateMetrics() {
             }
         });
 
-        us.dbEffort = { 
-            orig: dbOrig, 
-            actual: dbActual, 
+        us.dbEffort = {
+            orig: dbOrig,
+            actual: dbActual,
             dev: dbOrig / (dbActual || 1),
             names: Array.from(dbNames).join(', ') || 'N/A'
         };
@@ -330,7 +321,7 @@ function calculateMetrics() {
         us.rework = {
             generic: { count: 0, actualTime: 0, severity: { critical: 0, high: 0, medium: 0, low: 0 } },
             specific: { count: 0, actualTime: 0, severity: { critical: 0, high: 0, medium: 0, low: 0 } },
-            severity: { critical: 0, high: 0, medium: 0, low: 0 }, 
+            severity: { critical: 0, high: 0, medium: 0, low: 0 },
             timeEstimation: 0,
             actualTime: 0,
             count: 0,
@@ -344,16 +335,18 @@ function calculateMetrics() {
         us.reviewActivities = [];
         us.reviewCategories = [];
 
+        // ===== معالجة البج (Bugs) مع استخدام BugType =====
         us.bugs.forEach(b => {
             const isGeneric = (b['GenericBug'] || "").trim().toLowerCase() === 'yes';
             const bDevAct = parseFloat(b['TimeSheet_DevActualTime']) || 0;
             const bEst = parseFloat(b['Original Estimation']) || 0;
             const sev = b['Severity'] || "";
-            const bugType = (b['BugType'] || "").trim().toUpperCase();
+            const bugType = (b['BugType'] || "").trim().toUpperCase();  // استخراج النوع
 
             const title = b['Title'] || '';
             us.bugTitles.push(title);
-            us.bugCategories.push(classifyBugTitle(title));
+            // التصنيف يعتمد على bugType، وإذا كان فارغاً نضع 'UNKNOWN'
+            us.bugCategories.push(bugType || 'UNKNOWN');
 
             if (bugType === 'UAT') {
                 us.rework.uatBugsCount++;
@@ -369,25 +362,22 @@ function calculateMetrics() {
             target.count++;
             target.actualTime += bDevAct;
 
-            if (sev.includes("1 - Critical")) { 
-                target.severity.critical++; 
-                us.rework.severity.critical++; 
-                us.severityCounts.critical++; 
-            }
-            else if (sev.includes("2 - High")) { 
-                target.severity.high++; 
-                us.rework.severity.high++; 
-                us.severityCounts.high++; 
-            }
-            else if (sev.includes("3 - Medium")) { 
-                target.severity.medium++; 
-                us.rework.severity.medium++; 
-                us.severityCounts.medium++; 
-            }
-            else if (sev.includes("4 - Low")) { 
-                target.severity.low++; 
-                us.rework.severity.low++; 
-                us.severityCounts.low++; 
+            if (sev.includes("1 - Critical")) {
+                target.severity.critical++;
+                us.rework.severity.critical++;
+                us.severityCounts.critical++;
+            } else if (sev.includes("2 - High")) {
+                target.severity.high++;
+                us.rework.severity.high++;
+                us.severityCounts.high++;
+            } else if (sev.includes("3 - Medium")) {
+                target.severity.medium++;
+                us.rework.severity.medium++;
+                us.severityCounts.medium++;
+            } else if (sev.includes("4 - Low")) {
+                target.severity.low++;
+                us.rework.severity.low++;
+                us.severityCounts.low++;
             }
         });
 
@@ -398,16 +388,16 @@ function calculateMetrics() {
         us.rework.deviation = bugOrig / (bugActualTotal || 1);
         us.rework.percentage = (bugActualTotal / (us.devEffort.actual || 1)) * 100;
 
-        // 3. Reviews
+        // 3. Reviews (بدون تعديل هنا)
         us.reviewStats = {
             estimation: 0,
-            devActual: 0, 
+            devActual: 0,
             testActual: 0,
-            totalActual: 0, 
+            totalActual: 0,
             devCount: 0,
             testCount: 0,
             count: us.reviews ? us.reviews.length : 0,
-            severity: { critical: 0, high: 0, medium: 0, low: 0}
+            severity: { critical: 0, high: 0, medium: 0, low: 0 }
         };
 
         if (us.reviews) {
@@ -423,7 +413,7 @@ function calculateMetrics() {
                 const title = r['Title'] || '';
                 us.reviewTitles.push(title);
                 us.reviewActivities.push(activity || '');
-                us.reviewCategories.push(classifyReviewTitle(title));
+                us.reviewCategories.push(classifyReviewTitle(title)); // تبقى كما هي
 
                 if (activity === 'Development') {
                     us.reviewStats.devActual += rDevAct;
@@ -442,7 +432,7 @@ function calculateMetrics() {
             us.reviewStats.totalActual = us.reviewStats.devActual + us.reviewStats.testActual;
         }
 
-        // ===== NEW: Test Cases Statistics =====
+        // Test Cases
         us.testCases = us.testCases || [];
         us.testCaseStats = {
             total: us.testCases.length,
@@ -456,11 +446,10 @@ function calculateMetrics() {
             }
         });
 
-        // تعيين القيم المحسوبة
         us.testCaseStats.designCount = us.testCaseStats.byStatus['Design'] || 0;
         us.testCaseStats.executedCount = us.testCaseStats.total - us.testCaseStats.designCount;
-        us.testCaseStats.executionRate = us.testCaseStats.total > 0 
-            ? (us.testCaseStats.executedCount / us.testCaseStats.total) * 100 
+        us.testCaseStats.executionRate = us.testCaseStats.total > 0
+            ? (us.testCaseStats.executedCount / us.testCaseStats.total) * 100
             : 0;
 
         // 4. Timeline and Cycle Time
@@ -476,7 +465,6 @@ function calculateMetrics() {
         calculateTimeline(us);
     });
 }
-
 
 function calculateTimeline(us) {
     let tasks = us.tasks;
