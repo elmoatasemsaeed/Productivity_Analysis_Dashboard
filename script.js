@@ -1668,7 +1668,7 @@ function renderBusinessView() {
 
 })(typeof global !== 'undefined' ? global : typeof window !== 'undefined' ? window : this);
 
-}
+
 
 function renderTeamView() {
     const container = document.getElementById('team-view');
