@@ -948,47 +948,296 @@ function renderBusinessView() {
 }
 
 const REVIEW_CATEGORIES = {
-    "Validation": ["validation","validate","validator","required","null","empty","mandatory","check","verify","condition","constraint","range"],
-    "Business Logic": ["logic","rule","workflow","business","calculation","formula","process","decision","status","transition"],
-    "Database": ["sql","database","db","table","column","query","entity","repository","dbcontext","migration","index","join","foreign key","primary key","stored procedure","view"],
-    "API & Integration": ["api","endpoint","request","response","json","xml","rest","soap","integration","mapping","serializer","deserializer","contract","interface"],
-    "Architecture": ["service","factory","dependency","inject","architecture","layer","dto","model","controller","manager","handler","provider","adapter","mediator","strategy"],
-    "Performance": ["performance","optimize","optimization","cache","slow","timeout","memory","cpu","parallel","thread","async","await","bulk","batch"],
-    "Security": ["security","permission","role","authentication","authorization","encrypt","decrypt","token","jwt","access","identity"],
-    "UI": ["ui","ux","screen","page","button","layout","css","html","javascript","jquery","frontend","popup","dialog","grid","form"],
-    "Reports": ["report","print","pdf","excel","export","import","dashboard","chart","graph"],
-    "Naming & Standards": ["rename","naming","convention","standard","camel","pascal","coding standard","style","bd001","bd002","bd003","bd004","bd005","bd006","bd007","bd008","bd009","bd010","bd011","bd012","bd013","bd014","bd015","bd016"],
-    "Code Quality": ["refactor","cleanup","clean up","duplicate","duplication","remove","unused","comment","simplify","improve","enhancement","readability","maintainability","complexity","magic number","hardcode","hardcoded"],
-    "Testing": ["unit test","integration test","test","mock","coverage","assert","review report","pull request","pr"]
+    "Validation": {
+        keywords: [
+            { word: "validation", weight: 5 },
+            { word: "validate", weight: 4 },
+            { word: "validator", weight: 5 },
+            { word: "required", weight: 4 },
+            { word: "nullable", weight: 3 },
+            { word: "not null", weight: 4 },
+            { word: "maxlength", weight: 3 },
+            { word: "minlength", weight: 3 },
+            { word: "regex", weight: 5 },
+            { word: "duplicate", weight: 4 },
+            { word: "unique", weight: 4 },
+            { word: "exists", weight: 3 },
+            { word: "requiredif", weight: 4 },
+            { word: "invalid", weight: 3 },
+            { word: "constraint", weight: 5 },
+            { word: "sanitization", weight: 4 }
+        ]
+    },
+    "Business Logic": {
+        keywords: [
+            { word: "domain", weight: 5 },
+            { word: "workflow", weight: 5 },
+            { word: "approval", weight: 4 },
+            { word: "state", weight: 3 },
+            { word: "transition", weight: 4 },
+            { word: "condition", weight: 4 },
+            { word: "calculation", weight: 5 },
+            { word: "eligibility", weight: 4 },
+            { word: "decision", weight: 4 },
+            { word: "rule engine", weight: 5 },
+            { word: "business rule", weight: 5 }
+        ]
+    },
+    "Database": {
+        keywords: [
+            { word: "dbcontext", weight: 5 },
+            { word: "entity framework", weight: 5 },
+            { word: "repository", weight: 5 },
+            { word: "transaction", weight: 5 },
+            { word: "stored procedure", weight: 5 },
+            { word: "view", weight: 3 },
+            { word: "trigger", weight: 4 },
+            { word: "sequence", weight: 3 },
+            { word: "constraint", weight: 4 },
+            { word: "normalization", weight: 4 },
+            { word: "deadlock", weight: 5 },
+            { word: "indexing", weight: 4 },
+            { word: "sql", weight: 3 },
+            { word: "table", weight: 2 },
+            { word: "column", weight: 1 }
+        ]
+    },
+    "API & Integration": {
+        keywords: [
+            { word: "grpc", weight: 5 },
+            { word: "webhook", weight: 5 },
+            { word: "swagger", weight: 5 },
+            { word: "openapi", weight: 5 },
+            { word: "serialization", weight: 4 },
+            { word: "deserialization", weight: 4 },
+            { word: "payload", weight: 4 },
+            { word: "contract", weight: 5 },
+            { word: "http", weight: 3 },
+            { word: "https", weight: 3 },
+            { word: "postman", weight: 4 },
+            { word: "api versioning", weight: 5 }
+        ]
+    },
+    "Architecture": {
+        keywords: [
+            { word: "solid", weight: 5 },
+            { word: "ioc", weight: 5 },
+            { word: "dependency injection", weight: 5 },
+            { word: "cqrs", weight: 5 },
+            { word: "mediator", weight: 5 },
+            { word: "adapter", weight: 5 },
+            { word: "factory", weight: 5 },
+            { word: "builder", weight: 5 },
+            { word: "strategy", weight: 5 },
+            { word: "singleton", weight: 5 },
+            { word: "repository pattern", weight: 5 },
+            { word: "service layer", weight: 5 },
+            { word: "abstraction", weight: 5 }
+        ]
+    },
+    "Performance": {
+        keywords: [
+            { word: "latency", weight: 5 },
+            { word: "throughput", weight: 5 },
+            { word: "response time", weight: 5 },
+            { word: "memory leak", weight: 5 },
+            { word: "allocation", weight: 4 },
+            { word: "profiling", weight: 4 },
+            { word: "bottleneck", weight: 5 },
+            { word: "gc", weight: 4 },
+            { word: "parallelism", weight: 4 },
+            { word: "lazy loading", weight: 5 },
+            { word: "bulk insert", weight: 5 }
+        ]
+    },
+    "Security": {
+        keywords: [
+            { word: "csrf", weight: 5 },
+            { word: "xss", weight: 5 },
+            { word: "sql injection", weight: 5 },
+            { word: "cors", weight: 4 },
+            { word: "cookie", weight: 3 },
+            { word: "session", weight: 3 },
+            { word: "credential", weight: 4 },
+            { word: "secret", weight: 5 },
+            { word: "hash", weight: 4 },
+            { word: "salt", weight: 4 },
+            { word: "oauth", weight: 5 },
+            { word: "bearer", weight: 4 },
+            { word: "encryption", weight: 5 },
+            { word: "authorization", weight: 4 }
+        ]
+    },
+    "UI": {
+        keywords: [
+            { word: "react", weight: 5 },
+            { word: "angular", weight: 5 },
+            { word: "vue", weight: 5 },
+            { word: "blazor", weight: 5 },
+            { word: "bootstrap", weight: 4 },
+            { word: "responsive", weight: 4 },
+            { word: "alignment", weight: 3 },
+            { word: "spacing", weight: 2 },
+            { word: "icon", weight: 2 },
+            { word: "modal", weight: 4 },
+            { word: "tooltip", weight: 3 },
+            { word: "dropdown", weight: 3 },
+            { word: "datatable", weight: 4 }
+        ]
+    },
+    "Reports": {
+        keywords: [
+            { word: "rdlc", weight: 5 },
+            { word: "ssrs", weight: 5 },
+            { word: "power bi", weight: 5 },
+            { word: "chart", weight: 4 },
+            { word: "dashboard", weight: 5 },
+            { word: "pivot", weight: 4 },
+            { word: "grouping", weight: 3 },
+            { word: "filter", weight: 3 },
+            { word: "aggregation", weight: 4 }
+        ]
+    },
+    "Code Quality": {
+        keywords: [
+            { word: "code smell", weight: 5 },
+            { word: "cyclomatic complexity", weight: 5 },
+            { word: "maintainability", weight: 5 },
+            { word: "technical debt", weight: 5 },
+            { word: "duplicate code", weight: 5 },
+            { word: "dead code", weight: 5 },
+            { word: "refactoring", weight: 4 },
+            { word: "cleanup", weight: 3 },
+            { word: "readability", weight: 4 },
+            { word: "hardcoded", weight: 4 },
+            { word: "magic number", weight: 5 },
+            { word: "sonarqube", weight: 5 }
+        ]
+    },
+    "Testing": {
+        keywords: [
+            { word: "test case", weight: 5 },
+            { word: "integration test", weight: 5 },
+            { word: "unit test", weight: 5 },
+            { word: "automation", weight: 4 },
+            { word: "selenium", weight: 5 },
+            { word: "mock", weight: 4 },
+            { word: "stub", weight: 4 },
+            { word: "assertion", weight: 4 },
+            { word: "coverage", weight: 5 },
+            { word: "nunit", weight: 5 },
+            { word: "xunit", weight: 5 },
+            { word: "mstest", weight: 5 }
+        ]
+    },
+    "Naming & Standards": {
+        keywords: [
+            { word: "camelcase", weight: 4 },
+            { word: "pascalcase", weight: 4 },
+            { word: "kebab-case", weight: 4 },
+            { word: "snake_case", weight: 4 },
+            { word: "coding guideline", weight: 5 },
+            { word: "convention", weight: 4 },
+            { word: "style", weight: 3 },
+            { word: "formatting", weight: 3 },
+            ...Array.from({ length: 99 }, (_, i) => ({ word: `bd${String(i + 1).padStart(2, '0')}`, weight: 5 }))
+        ]
+    }
 };
 
 function classifyReviewTitle(title) {
     if (!title) return "Code Quality";
-    const text = title.toLowerCase();
-    const scores = {};
+
+    const text = title;
+    // تجميع النتائج لكل تصنيف: { category: { totalScore, matchCount, phraseCount } }
+    const results = {};
+
     for (const category in REVIEW_CATEGORIES) {
-        scores[category] = 0;
-        for (const keyword of REVIEW_CATEGORIES[category]) {
-            if (text.includes(keyword)) {
-                scores[category] += keyword.length > 8 ? 2 : 1;
+        let totalScore = 0;
+        let matchCount = 0;
+        let phraseCount = 0; // عدد العبارات المركبة المطابقة (طول الكلمة > 10 مثلاً)
+
+        const entries = REVIEW_CATEGORIES[category].keywords;
+        for (const entry of entries) {
+            const word = entry.word;
+            const weight = entry.weight;
+            // استخدام مطابقة الكلمة الكاملة (حدود كلمة) بواسطة RegExp
+            // للعبارات التي تحتوي على مسافة، نستخدم مطابقة النص الكامل
+            let pattern;
+            if (/\s/.test(word)) {
+                // عبارة مركبة: نبحث عنها كاملة مع حدود كلمة لكل جزء (اختياري)
+                // لكن الأسهل: نبحث عن العبارة كاملة غير حساسة لحالة الأحرف
+                pattern = new RegExp(`\\b${word.replace(/ /g, '\\s+')}\\b`, 'i');
+            } else {
+                pattern = new RegExp(`\\b${word}\\b`, 'i');
+            }
+
+            if (pattern.test(text)) {
+                totalScore += weight;
+                matchCount++;
+                if (word.length > 10) phraseCount++; // عبارات طويلة غالباً مركبة
             }
         }
+
+        // Bonus إذا ظهرت أكثر من كلمة قوية (وزن >= 4)
+        let bonus = 0;
+        const strongMatches = entries.filter(e => e.weight >= 4 && new RegExp(`\\b${e.word.replace(/ /g, '\\s+')}\\b`, 'i').test(text));
+        if (strongMatches.length >= 2) bonus += 2;
+
+        results[category] = {
+            totalScore: totalScore + bonus,
+            matchCount,
+            phraseCount
+        };
     }
-    let bestCategory = "Code Quality", highestScore = -1;
-    for (const category in scores) {
-        if (scores[category] > highestScore) {
-            highestScore = scores[category];
-            bestCategory = category;
+
+    // استخراج التصنيفات ذات الدرجات الأعلى
+    let maxScore = -1;
+    let topCategories = [];
+
+    for (const category in results) {
+        const score = results[category].totalScore;
+        if (score > maxScore) {
+            maxScore = score;
+            topCategories = [category];
+        } else if (score === maxScore) {
+            topCategories.push(category);
         }
     }
-    if (highestScore === 0) {
-        if (text.includes("fix") || text.includes("bug")) return "Code Quality";
-        if (text.includes("review")) return "Code Quality";
-        if (text.includes("create") || text.includes("add")) return "Architecture";
-        if (text.includes("update")) return "Code Quality";
+
+    // إذا لم يكن هناك أي تطابق
+    if (maxScore === 0) {
+        // كلمات عامة: نعطي Code Quality بشكل افتراضي
+        if (/\b(fix|bug|review|change|modify|add|update)\b/i.test(text)) {
+            return "Code Quality";
+        }
         return "Code Quality";
     }
-    return bestCategory;
+
+    // معالجة التعادل
+    if (topCategories.length > 1) {
+        // ترتيب حسب عدد المطابقات، ثم عدد العبارات المركبة
+        topCategories.sort((a, b) => {
+            const aMatch = results[a].matchCount;
+            const bMatch = results[b].matchCount;
+            if (aMatch !== bMatch) return bMatch - aMatch;
+
+            const aPhrase = results[a].phraseCount;
+            const bPhrase = results[b].phraseCount;
+            return bPhrase - aPhrase;
+        });
+
+        // إذا كان الفرق في الدرجة بين الأول والثاني <= 1، نعتبرهما متقاربين ونرجع معاً
+        const first = topCategories[0];
+        const second = topCategories[1];
+        if (second && (results[first].totalScore - results[second].totalScore) <= 1) {
+            // نرجع كلا التصنيفين مفصولين بـ " + "
+            return `${first} + ${second}`;
+        }
+        return first;
+    }
+
+    return topCategories[0];
 }
 
 function renderTeamView() {
@@ -999,158 +1248,75 @@ function renderTeamView() {
     }
     const grouped = groupBy(processedStories, 'businessArea');
 
-    let devParticipation = {};
-    let testerParticipation = {};
-    let dbParticipation = {};
-    let areaDevs = {};
-    let areaTesters = {};
-    let areaDbs = {};
-
+    let devParticipation = {}, testerParticipation = {}, dbParticipation = {};
+    let areaDevs = {}, areaTesters = {}, areaDbs = {};
     for (let area in grouped) {
-        areaDevs[area] = new Set();
-        areaTesters[area] = new Set();
-        areaDbs[area] = new Set();
+        areaDevs[area] = new Set(); areaTesters[area] = new Set(); areaDbs[area] = new Set();
         grouped[area].forEach(us => {
             if (us.devLead) areaDevs[area].add(us.devLead);
             if (us.testerLead) areaTesters[area].add(us.testerLead);
             if (us.tasks) {
                 us.tasks.forEach(t => {
-                    if (t['Activity'] === 'DB Modification' && t['Assigned To']) {
-                        areaDbs[area].add(t['Assigned To']);
-                    }
+                    if (t['Activity'] === 'DB Modification' && t['Assigned To']) areaDbs[area].add(t['Assigned To']);
                 });
             }
         });
-        areaDevs[area].forEach(d => {
-            devParticipation[d] = (devParticipation[d] || 0) + 1;
-        });
-        areaTesters[area].forEach(t => {
-            testerParticipation[t] = (testerParticipation[t] || 0) + 1;
-        });
-        areaDbs[area].forEach(db => {
-            dbParticipation[db] = (dbParticipation[db] || 0) + 1;
-        });
+        areaDevs[area].forEach(d => devParticipation[d] = (devParticipation[d] || 0) + 1);
+        areaTesters[area].forEach(t => testerParticipation[t] = (testerParticipation[t] || 0) + 1);
+        areaDbs[area].forEach(db => dbParticipation[db] = (dbParticipation[db] || 0) + 1);
     }
 
-    let html = `
-    <div style="direction: ltr; text-align: left; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px;">
-        <h2 style="margin-bottom:30px; color: #2c3e50; border-left: 6px solid #2ecc71; padding-left: 20px; font-size: 1.8em;"> 
-            🚀 Team Performance Analytics (Unified QC & Review Scope) 
-        </h2>`;
+    let html = `<div style="direction:ltr;text-align:left;font-family:'Segoe UI',sans-serif;padding:20px;">
+        <h2 style="margin-bottom:30px;color:#2c3e50;border-left:6px solid #2ecc71;padding-left:20px;font-size:1.8em;">🚀 Team Performance Analytics (Unified QC & Review Scope)</h2>`;
 
     for (let area in grouped) {
         let stats = {
-            totalEst: 0,
-            totalAct: 0,
-            reworkTime: 0,
-            reviewTime: 0,
-            bugsCount: 0,
-            bugsCrit: 0,
-            bugsHigh: 0,
-            bugsMed: 0,
-            bugsLow: 0,
-            reviewCount: 0,
-            revCrit: 0,
-            revHigh: 0,
-            revMed: 0,
-            revLow: 0,
-            totalStories: grouped[area].length,
-            closedStoriesCount: 0,
-            totalCycleTime: 0,
-            totalUatBugs: 0,
-            totalIterationBugs: 0,
-            genericBugCount: 0,
-            specificBugCount: 0,
-            bugDistributionByDev: {},
-            bugDistributionByStory: {},
-            bugSeverityByStory: {},
-            reviewDistributionByStory: {},
-            reviewSeverityByStory: {},
-            bugTitles: [],
-            bugCategories: [],
-            reviewTitles: [],
-            reviewActivities: [],
-            reviewCategories: [],
-            maxCycleTime: 0,
-            maxCycleTimeStoryId: null,
-            maxCycleTimeStoryEst: 0,
-            maxCycleTimeStoryRework: 0,
-            testCaseTotal: 0,
-            testCaseDesign: 0,
-            testCaseExecuted: 0,
-            testCaseStatusCounts: {}
+            totalEst:0,totalAct:0,reworkTime:0,reviewTime:0,bugsCount:0,bugsCrit:0,bugsHigh:0,bugsMed:0,bugsLow:0,
+            reviewCount:0,revCrit:0,revHigh:0,revMed:0,revLow:0,totalStories:grouped[area].length,closedStoriesCount:0,
+            totalCycleTime:0,totalUatBugs:0,totalIterationBugs:0,genericBugCount:0,specificBugCount:0,
+            bugDistributionByDev:{},bugDistributionByStory:{},bugSeverityByStory:{},
+            reviewDistributionByStory:{},reviewSeverityByStory:{},
+            bugTitles:[],bugCategories:[],reviewTitles:[],reviewActivities:[],reviewCategories:[],
+            maxCycleTime:0,maxCycleTimeStoryId:null,maxCycleTimeStoryEst:0,maxCycleTimeStoryRework:0,
+            testCaseTotal:0,testCaseDesign:0,testCaseExecuted:0,testCaseStatusCounts:{}
         };
-
-        let devCountCount = 0;
-        areaDevs[area].forEach(d => {
-            if(devParticipation[d]) devCountCount += (1 / devParticipation[d]);
-        });
-        let testerCountCount = 0;
-        areaTesters[area].forEach(t => {
-            if(testerParticipation[t]) testerCountCount += (1 / testerParticipation[t]);
-        });
-        let dbCountCount = 0;
-        areaDbs[area].forEach(db => {
-            if(dbParticipation[db]) dbCountCount += (1 / dbParticipation[db]);
-        });
-        stats.devCountCount = devCountCount;
-        stats.testerCountCount = testerCountCount;
-        stats.dbCountCount = dbCountCount;
+        let devCountCount=0,testerCountCount=0,dbCountCount=0;
+        areaDevs[area].forEach(d => devCountCount += (devParticipation[d]?1/devParticipation[d]:0));
+        areaTesters[area].forEach(t => testerCountCount += (testerParticipation[t]?1/testerParticipation[t]:0));
+        areaDbs[area].forEach(db => dbCountCount += (dbParticipation[db]?1/dbParticipation[db]:0));
+        stats.devCountCount=devCountCount; stats.testerCountCount=testerCountCount; stats.dbCountCount=dbCountCount;
 
         grouped[area].forEach(us => {
-            const sEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig || 0);
+            const sEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig||0);
             const sRvTime = us.reviewStats.devActual + us.reviewStats.testActual;
-            const sAct = us.devEffort.actual + us.testEffort.actual + (us.dbEffort?.actual || 0) + us.rework.actualTime + sRvTime;
-            
-            stats.totalEst += sEst;
-            stats.totalAct += sAct;
-            stats.reworkTime += us.rework.actualTime;
-            stats.reviewTime += sRvTime;
-            stats.totalCycleTime += (us.cycleTime || 0);
-            stats.bugsCount += us.rework.count;
-            stats.bugsCrit += us.rework.severity.critical;
-            stats.bugsHigh += us.rework.severity.high;
-            stats.bugsMed += us.rework.severity.medium;
-            stats.bugsLow += us.rework.severity.low;
-            stats.reviewCount += us.reviewStats.count;
-            stats.revCrit += us.reviewStats.severity.critical;
-            stats.revHigh += us.reviewStats.severity.high;
-            stats.revMed += us.reviewStats.severity.medium;
-            stats.revLow += us.reviewStats.severity.low;
+            const sAct = us.devEffort.actual + us.testEffort.actual + (us.dbEffort?.actual||0) + us.rework.actualTime + sRvTime;
+            stats.totalEst += sEst; stats.totalAct += sAct; stats.reworkTime += us.rework.actualTime; stats.reviewTime += sRvTime;
+            stats.totalCycleTime += (us.cycleTime||0);
+            stats.bugsCount += us.rework.count; stats.bugsCrit += us.rework.severity.critical; stats.bugsHigh += us.rework.severity.high; stats.bugsMed += us.rework.severity.medium; stats.bugsLow += us.rework.severity.low;
+            stats.reviewCount += us.reviewStats.count; stats.revCrit += us.reviewStats.severity.critical; stats.revHigh += us.reviewStats.severity.high; stats.revMed += us.reviewStats.severity.medium; stats.revLow += us.reviewStats.severity.low;
+            stats.totalUatBugs += (us.rework.uatBugsCount||0); stats.totalIterationBugs += (us.rework.iterationBugsCount||0);
+            stats.genericBugCount += (us.rework.generic?us.rework.generic.count:0); stats.specificBugCount += (us.rework.specific?us.rework.specific.count:0);
 
-            stats.totalUatBugs += (us.rework.uatBugsCount || 0);
-            stats.totalIterationBugs += (us.rework.iterationBugsCount || 0);
-
-            stats.genericBugCount += (us.rework.generic ? us.rework.generic.count : 0);
-            stats.specificBugCount += (us.rework.specific ? us.rework.specific.count : 0);
-
-            const dev = us.devLead || 'Unassigned';
-            stats.bugDistributionByDev[dev] = (stats.bugDistributionByDev[dev] || 0) + us.bugs.length;
-
-            const storyId = us.id || 'Unknown';
-            stats.bugDistributionByStory[storyId] = (stats.bugDistributionByStory[storyId] || 0) + us.bugs.length;
-
-            if (!stats.bugSeverityByStory[storyId]) {
-                stats.bugSeverityByStory[storyId] = { critical: 0, high: 0, medium: 0, low: 0 };
-            }
+            const dev = us.devLead||'Unassigned';
+            stats.bugDistributionByDev[dev] = (stats.bugDistributionByDev[dev]||0) + us.bugs.length;
+            const storyId = us.id||'Unknown';
+            stats.bugDistributionByStory[storyId] = (stats.bugDistributionByStory[storyId]||0) + us.bugs.length;
+            if (!stats.bugSeverityByStory[storyId]) stats.bugSeverityByStory[storyId] = {critical:0,high:0,medium:0,low:0};
             us.bugs.forEach(b => {
-                const sev = b['Severity'] || '';
+                const sev = b['Severity']||'';
                 if (sev.includes('1 - Critical')) stats.bugSeverityByStory[storyId].critical++;
                 else if (sev.includes('2 - High')) stats.bugSeverityByStory[storyId].high++;
                 else if (sev.includes('3 - Medium')) stats.bugSeverityByStory[storyId].medium++;
                 else if (sev.includes('4 - Low')) stats.bugSeverityByStory[storyId].low++;
             });
 
-            // ---- تتبع الـ Reviews لكل قصة ----
+            // --- Reviews per story ---
             const reviewCount = us.reviews ? us.reviews.length : 0;
-            stats.reviewDistributionByStory[storyId] = (stats.reviewDistributionByStory[storyId] || 0) + reviewCount;
-
-            if (!stats.reviewSeverityByStory[storyId]) {
-                stats.reviewSeverityByStory[storyId] = { critical: 0, high: 0, medium: 0, low: 0 };
-            }
+            stats.reviewDistributionByStory[storyId] = (stats.reviewDistributionByStory[storyId]||0) + reviewCount;
+            if (!stats.reviewSeverityByStory[storyId]) stats.reviewSeverityByStory[storyId] = {critical:0,high:0,medium:0,low:0};
             if (us.reviews) {
                 us.reviews.forEach(r => {
-                    const sev = r['Severity'] || '';
+                    const sev = r['Severity']||'';
                     if (sev.includes('1 - Critical')) stats.reviewSeverityByStory[storyId].critical++;
                     else if (sev.includes('2 - High')) stats.reviewSeverityByStory[storyId].high++;
                     else if (sev.includes('3 - Medium')) stats.reviewSeverityByStory[storyId].medium++;
@@ -1158,43 +1324,29 @@ function renderTeamView() {
                 });
             }
 
-            if (us.bugTitles) {
-                stats.bugTitles = stats.bugTitles.concat(us.bugTitles);
-                stats.bugCategories = stats.bugCategories.concat(us.bugCategories || []);
-            }
-            if (us.reviewTitles) {
-                stats.reviewTitles = stats.reviewTitles.concat(us.reviewTitles);
-                stats.reviewActivities = stats.reviewActivities.concat(us.reviewActivities || []);
-                stats.reviewCategories = stats.reviewCategories.concat(us.reviewCategories || []);
-            }
+            if (us.bugTitles) { stats.bugTitles = stats.bugTitles.concat(us.bugTitles); stats.bugCategories = stats.bugCategories.concat(us.bugCategories||[]); }
+            if (us.reviewTitles) { stats.reviewTitles = stats.reviewTitles.concat(us.reviewTitles); stats.reviewActivities = stats.reviewActivities.concat(us.reviewActivities||[]); stats.reviewCategories = stats.reviewCategories.concat(us.reviewCategories||[]); }
 
             if (us.testCaseStats) {
-                stats.testCaseTotal += us.testCaseStats.total || 0;
-                stats.testCaseDesign += us.testCaseStats.designCount || 0;
-                stats.testCaseExecuted += us.testCaseStats.executedCount || 0;
+                stats.testCaseTotal += us.testCaseStats.total||0;
+                stats.testCaseDesign += us.testCaseStats.designCount||0;
+                stats.testCaseExecuted += us.testCaseStats.executedCount||0;
                 if (us.testCaseStats.byStatus) {
                     Object.keys(us.testCaseStats.byStatus).forEach(status => {
-                        stats.testCaseStatusCounts[status] = 
-                            (stats.testCaseStatusCounts[status] || 0) + us.testCaseStats.byStatus[status];
+                        stats.testCaseStatusCounts[status] = (stats.testCaseStatusCounts[status]||0) + us.testCaseStats.byStatus[status];
                     });
                 }
             }
 
-            const storyTotalEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig || 0);
+            const storyTotalEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig||0);
             const storyReviewTime = us.reviewStats.devActual + us.reviewStats.testActual;
-            const storyTotalAct = us.devEffort.actual + us.testEffort.actual + (us.dbEffort?.actual || 0) + us.rework.actualTime + storyReviewTime;
-
-            if (us.cycleTime > (stats.maxCycleTime || 0)) {
-                stats.maxCycleTime = us.cycleTime;
-                stats.maxCycleTimeStoryId = us.id || 'Unknown';
-                stats.maxCycleTimeStoryEst = storyTotalEst;
-                stats.maxCycleTimeStoryRework = us.rework.actualTime || 0;
+            const storyTotalAct = us.devEffort.actual + us.testEffort.actual + (us.dbEffort?.actual||0) + us.rework.actualTime + storyReviewTime;
+            if (us.cycleTime > (stats.maxCycleTime||0)) {
+                stats.maxCycleTime = us.cycleTime; stats.maxCycleTimeStoryId = us.id||'Unknown';
+                stats.maxCycleTimeStoryEst = storyTotalEst; stats.maxCycleTimeStoryRework = us.rework.actualTime||0;
                 stats.maxCycleTimeStoryHours = us.cycleTime * 5;
             }
-
-            if (us.status === 'Closed' || us.status === 'Tested' || us.status === 'Resolved' || us.status === 'To Be Reviewed') {
-                stats.closedStoriesCount++;
-            }
+            if (us.status === 'Closed' || us.status === 'Tested' || us.status === 'Resolved' || us.status === 'To Be Reviewed') stats.closedStoriesCount++;
         });
 
         const effortVariance = stats.totalEst > 0 ? ((stats.totalAct - stats.totalEst) / stats.totalEst) * 100 : 0;
@@ -1203,402 +1355,271 @@ function renderTeamView() {
 
         let thresholdDays = null;
         let areaLower = area.toLowerCase();
-        if (areaLower.includes('registration') || areaLower.includes('internal lab')) {
-            thresholdDays = 18;
-        } else if (areaLower.includes('front') || areaLower.includes('financial')) {
-            thresholdDays = 9;
-        }
-        let isExceeded = false;
+        if (areaLower.includes('registration') || areaLower.includes('internal lab')) thresholdDays = 18;
+        else if (areaLower.includes('front') || areaLower.includes('financial')) thresholdDays = 9;
         let thresholdMsg = '';
-        if (thresholdDays !== null && parseFloat(avgCycleTime) > thresholdDays) {
-            isExceeded = true;
-            thresholdMsg = `⚠️ Exceeds threshold (${thresholdDays}d max)`;
-        } else if (thresholdDays !== null) {
-            thresholdMsg = `✅ Within threshold (≤${thresholdDays}d)`;
+        if (thresholdDays !== null) {
+            thresholdMsg = parseFloat(avgCycleTime) > thresholdDays ? `⚠️ Exceeds threshold (${thresholdDays}d max)` : `✅ Within threshold (≤${thresholdDays}d)`;
         }
 
         const totalAllBugs = stats.bugsCount + stats.totalUatBugs;
         const dreValueNum = totalAllBugs > 0 ? (stats.bugsCount / totalAllBugs) * 100 : 100;
         const dreValue = dreValueNum.toFixed(1);
-        
         const dreColor = dreValueNum >= 85 ? '#2e7d32' : '#d32f2f';
         const varianceColor = effortVariance <= 15 ? '#2e7d32' : '#d32f2f';
         const reworkColor = combinedReworkRatio > 15 ? '#d32f2f' : '#2e7d32';
 
-        const getSevBadges = (c, h, m, l, t) => {
-            if (!t) return '<div style="color:#7f8c8d; margin-top:5px; font-size:0.85em; font-style:italic;">No records found</div>';
-            const pct = (v) => ((v / t) * 100).toFixed(0);
-            const badgeStyle = (bg, color, border) => `background:${bg}; color:${color}; padding:8px 4px; border-radius:6px; text-align:center; flex:1; border:1px solid ${border}; display: flex; flex-direction: column; justify-content: center; min-width:65px;`;
-            return `
-             <div style="display: flex; gap: 6px; margin-top: 10px;">
-                <div style="${badgeStyle('#ffeaed', '#c0392b', '#ffcdd2')}"><span style="font-size:10px; font-weight:600;">Critical</span><b style="font-size:14px; margin-top:2px;">${c}</b><span style="font-size:9px; opacity:0.8;">${pct(c)}%</span></div>
-                <div style="${badgeStyle('#fff3e0', '#e67e22', '#ffe0b2')}"><span style="font-size:10px; font-weight:600;">High</span><b style="font-size:14px; margin-top:2px;">${h}</b><span style="font-size:9px; opacity:0.8;">${pct(h)}%</span></div>
-                <div style="${badgeStyle('#e8f4fd', '#2980b9', '#bbdefb')}"><span style="font-size:10px; font-weight:600;">Medium</span><b style="font-size:14px; margin-top:2px;">${m}</b><span style="font-size:9px; opacity:0.8;">${pct(m)}%</span></div>
-                <div style="${badgeStyle('#f5f5f5', '#7f8c8d', '#e0e0e0')}"><span style="font-size:10px; font-weight:600;">Low</span><b style="font-size:14px; margin-top:2px;">${l}</b><span style="font-size:9px; opacity:0.8;">${pct(l)}%</span></div>
-             </div>`;
+        const getSevBadges = (c,h,m,l,t) => {
+            if (!t) return '<div style="color:#7f8c8d;margin-top:5px;font-size:0.85em;font-style:italic;">No records found</div>';
+            const pct = (v) => ((v/t)*100).toFixed(0);
+            const badgeStyle = (bg,color,border) => `background:${bg};color:${color};padding:8px 4px;border-radius:6px;text-align:center;flex:1;border:1px solid ${border};display:flex;flex-direction:column;justify-content:center;min-width:65px;`;
+            return `<div style="display:flex;gap:6px;margin-top:10px;">
+                <div style="${badgeStyle('#ffeaed','#c0392b','#ffcdd2')}"><span style="font-size:10px;font-weight:600;">Critical</span><b style="font-size:14px;margin-top:2px;">${c}</b><span style="font-size:9px;opacity:0.8;">${pct(c)}%</span></div>
+                <div style="${badgeStyle('#fff3e0','#e67e22','#ffe0b2')}"><span style="font-size:10px;font-weight:600;">High</span><b style="font-size:14px;margin-top:2px;">${h}</b><span style="font-size:9px;opacity:0.8;">${pct(h)}%</span></div>
+                <div style="${badgeStyle('#e8f4fd','#2980b9','#bbdefb')}"><span style="font-size:10px;font-weight:600;">Medium</span><b style="font-size:14px;margin-top:2px;">${m}</b><span style="font-size:9px;opacity:0.8;">${pct(m)}%</span></div>
+                <div style="${badgeStyle('#f5f5f5','#7f8c8d','#e0e0e0')}"><span style="font-size:10px;font-weight:600;">Low</span><b style="font-size:14px;margin-top:2px;">${l}</b><span style="font-size:9px;opacity:0.8;">${pct(l)}%</span></div>
+            </div>`;
         };
 
         html += `
-        <div class="card" style="background:#ffffff; border-radius:12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding:25px; margin-bottom:35px; border-top: 4px solid #2ccc71;">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f1f2f6; padding-bottom:15px; margin-bottom:20px;">
-                <h3 style="margin:0; color:#2c3e50; font-size:1.4em; font-weight:700;">📂 Business Area: ${area}</h3>
-                <span style="background:#f1f2f6; color:#2c3e50; padding:6px 14px; border-radius:20px; font-size:0.85em; font-weight:600;">
+        <div class="card" style="background:#ffffff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);padding:25px;margin-bottom:35px;border-top:4px solid #2ccc71;">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f2f6;padding-bottom:15px;margin-bottom:20px;">
+                <h3 style="margin:0;color:#2c3e50;font-size:1.4em;font-weight:700;">📂 Business Area: ${area}</h3>
+                <span style="background:#f1f2f6;color:#2c3e50;padding:6px 14px;border-radius:20px;font-size:0.85em;font-weight:600;">
                     📊 Stories: <b>${stats.closedStoriesCount} / ${stats.totalStories} Closed</b>
                 </span>
             </div>
-
-            <div style="display:flex; gap:15px; margin-bottom:25px; background:#f8f9fa; padding:12px; border-radius:8px; font-size:0.9em; color:#57606f; border:1px solid #edeec4;">
+            <div style="display:flex;gap:15px;margin-bottom:25px;background:#f8f9fa;padding:12px;border-radius:8px;font-size:0.9em;color:#57606f;border:1px solid #edeec4;">
                 <span>👥 <b>FTE Dev Capacity:</b> ${devCountCount.toFixed(2)}</span> | 
                 <span>🧪 <b>FTE Tester Capacity:</b> ${testerCountCount.toFixed(2)}</span> | 
                 <span>🗄️ <b>FTE DB Capacity:</b> ${dbCountCount.toFixed(2)}</span>
             </div>
-
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:30px;">
-                
-                <div style="background:#fafafa; border-radius:10px; padding:20px; border-left:4px solid ${varianceColor}; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
-                    <div style="font-size:0.85em; color:#747d8c; text-transform:uppercase; font-weight:600;">Effort Variance</div>
-                    <div style="font-size:1.8em; font-weight:700; color:${varianceColor}; margin:5px 0;">${effortVariance.toFixed(1)}%</div>
-                    <div style="font-size:0.8em; color:#57606f;">Est: <b>${stats.totalEst.toFixed(1)}h</b> | Act: <b>${stats.totalAct.toFixed(1)}h</b></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:30px;">
+                <div style="background:#fafafa;border-radius:10px;padding:20px;border-left:4px solid ${varianceColor};box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="font-size:0.85em;color:#747d8c;text-transform:uppercase;font-weight:600;">Effort Variance</div>
+                    <div style="font-size:1.8em;font-weight:700;color:${varianceColor};margin:5px 0;">${effortVariance.toFixed(1)}%</div>
+                    <div style="font-size:0.8em;color:#57606f;">Est: <b>${stats.totalEst.toFixed(1)}h</b> | Act: <b>${stats.totalAct.toFixed(1)}h</b></div>
                 </div>
-
-                <div style="background:#fafafa; border-radius:10px; padding:20px; border-left:4px solid ${reworkColor}; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
-                    <div style="font-size:0.85em; color:#747d8c; text-transform:uppercase; font-weight:600;">Rework & Review Ratio</div>
-                    <div style="font-size:1.8em; font-weight:700; color:${reworkColor}; margin:5px 0;">${combinedReworkRatio.toFixed(1)}%</div>
-                    <div style="font-size:0.8em; color:#57606f;">Bugs: <b>${stats.reworkTime.toFixed(1)}h</b> | Revs: <b>${stats.reviewTime.toFixed(1)}h</b></div>
+                <div style="background:#fafafa;border-radius:10px;padding:20px;border-left:4px solid ${reworkColor};box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="font-size:0.85em;color:#747d8c;text-transform:uppercase;font-weight:600;">Rework & Review Ratio</div>
+                    <div style="font-size:1.8em;font-weight:700;color:${reworkColor};margin:5px 0;">${combinedReworkRatio.toFixed(1)}%</div>
+                    <div style="font-size:0.8em;color:#57606f;">Bugs: <b>${stats.reworkTime.toFixed(1)}h</b> | Revs: <b>${stats.reviewTime.toFixed(1)}h</b></div>
                 </div>
-
-                <div style="background:#fafafa; border-radius:10px; padding:20px; border-left:4px solid ${dreColor}; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
-                    <div style="font-size:0.85em; color:#747d8c; text-transform:uppercase; font-weight:600;">DRE</div>
-                    <div style="font-size:1.8em; font-weight:700; color:${dreColor}; margin:5px 0;">${dreValue}%</div>
-                    <div style="font-size:0.8em; color:#57606f;">UAT: <b>${stats.totalUatBugs}</b> / Iteration: <b>${stats.bugsCount}</b></div>
+                <div style="background:#fafafa;border-radius:10px;padding:20px;border-left:4px solid ${dreColor};box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="font-size:0.85em;color:#747d8c;text-transform:uppercase;font-weight:600;">DRE</div>
+                    <div style="font-size:1.8em;font-weight:700;color:${dreColor};margin:5px 0;">${dreValue}%</div>
+                    <div style="font-size:0.8em;color:#57606f;">UAT: <b>${stats.totalUatBugs}</b> / Iteration: <b>${stats.bugsCount}</b></div>
                 </div>
-
-                <div style="background:#fafafa; border-radius:10px; padding:20px; border-left:4px solid ${isExceeded ? '#e74c3c' : '#8e44ad'}; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
-                    <div style="font-size:0.85em; color:#747d8c; text-transform:uppercase; font-weight:600;">Avg Cycle Time</div>
-                    <div style="font-size:1.8em; font-weight:700; color:${isExceeded ? '#c0392b' : '#8e44ad'}; margin:5px 0;">${avgCycleTime} Days</div>
-                    <div style="font-size:0.75em; margin-top:6px; color:${isExceeded ? '#e74c3c' : '#2e7d32'};">
-                        ${thresholdMsg}
-                    </div>
-                    <div style="font-size:0.8em; color:#57606f;">Total Net Days: <b>${stats.totalCycleTime}</b></div>
+                <div style="background:#fafafa;border-radius:10px;padding:20px;border-left:4px solid ${parseFloat(avgCycleTime) > (thresholdDays||99) ? '#e74c3c' : '#8e44ad'};box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="font-size:0.85em;color:#747d8c;text-transform:uppercase;font-weight:600;">Avg Cycle Time</div>
+                    <div style="font-size:1.8em;font-weight:700;color:${parseFloat(avgCycleTime) > (thresholdDays||99) ? '#c0392b' : '#8e44ad'};margin:5px 0;">${avgCycleTime} Days</div>
+                    <div style="font-size:0.75em;margin-top:6px;color:${parseFloat(avgCycleTime) > (thresholdDays||99) ? '#e74c3c' : '#2e7d32'};">${thresholdMsg}</div>
+                    <div style="font-size:0.8em;color:#57606f;">Total Net Days: <b>${stats.totalCycleTime}</b></div>
                 </div>
-
             </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:25px; margin-bottom:20px;">
-                <div style="background:#fff; border:1px solid #eaeed8; border-radius:10px; padding:18px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-weight:600; color:#2c3e50; border-bottom:1px solid #f1f2f6; padding-bottom:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-bottom:20px;">
+                <div style="background:#fff;border:1px solid #eaeed8;border-radius:10px;padding:18px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-weight:600;color:#2c3e50;border-bottom:1px solid #f1f2f6;padding-bottom:8px;">
                         <span>🐞 Execution Bugs Detail</span>
-                        <span style="background:#ffebee; color:#c62828; font-size:0.8em; padding:2px 8px; border-radius:10px;">Count: ${stats.bugsCount}</span>
+                        <span style="background:#ffebee;color:#c62828;font-size:0.8em;padding:2px 8px;border-radius:10px;">Count: ${stats.bugsCount}</span>
                     </div>
-                    ${getSevBadges(stats.bugsCrit, stats.bugsHigh, stats.bugsMed, stats.bugsLow, stats.bugsCount)}
+                    ${getSevBadges(stats.bugsCrit,stats.bugsHigh,stats.bugsMed,stats.bugsLow,stats.bugsCount)}
                 </div>
-
-                <div style="background:#fff; border:1px solid #eaeed8; border-radius:10px; padding:18px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-weight:600; color:#2c3e50; border-bottom:1px solid #f1f2f6; padding-bottom:8px;">
+                <div style="background:#fff;border:1px solid #eaeed8;border-radius:10px;padding:18px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-weight:600;color:#2c3e50;border-bottom:1px solid #f1f2f6;padding-bottom:8px;">
                         <span>🔎 Shift-Left Reviews Detail</span>
-                        <span style="background:#f3e5f5; color:#6a1b9a; font-size:0.8em; padding:2px 8px; border-radius:10px;">Count: ${stats.reviewCount}</span>
+                        <span style="background:#f3e5f5;color:#6a1b9a;font-size:0.8em;padding:2px 8px;border-radius:10px;">Count: ${stats.reviewCount}</span>
                     </div>
-                    ${getSevBadges(stats.revCrit, stats.revHigh, stats.revMed, stats.revLow, stats.reviewCount)}
+                    ${getSevBadges(stats.revCrit,stats.revHigh,stats.revMed,stats.revLow,stats.reviewCount)}
                 </div>
             </div>
-
-            <div style="margin-top:25px; background:#f9f9fb; border-radius:8px; padding:20px; border:1px solid #eccc68; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">
-                <h4 style="margin:0 0 12px 0; color:#ffa502; font-size:1.05em; font-weight:700; display:flex; align-items:center; gap:8px;">
-                    🧠 Execution Analyses
-                </h4>
-                <ul style="margin:0; padding-left:20px; font-size:0.92em; color:#2c3e50; line-height:1.6;">
+            <div style="margin-top:25px;background:#f9f9fb;border-radius:8px;padding:20px;border:1px solid #eccc68;box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">
+                <h4 style="margin:0 0 12px 0;color:#ffa502;font-size:1.05em;font-weight:700;display:flex;align-items:center;gap:8px;">🧠 Execution Analyses</h4>
+                <ul style="margin:0;padding-left:20px;font-size:0.92em;color:#2c3e50;line-height:1.6;">
                     ${generateAdvancedQualityAnalysis(stats)}
                 </ul>
             </div>
-
         </div>`;
     }
-
     html += `</div>`;
     container.innerHTML = html;
 }
 
 function generateAdvancedQualityAnalysis(s) {
     let insights = [];
-    const infoIcon = (text) => `<span style="cursor:help; font-size:0.8em; color:#888; margin-left:4px;" title="${text}">ⓘ</span>`;
+    const infoIcon = (text) => `<span style="cursor:help;font-size:0.8em;color:#888;margin-left:4px;" title="${text}">ⓘ</span>`;
 
     // Test Cases Execution Coverage
-    const tcTotal = s.testCaseTotal || 0;
-    const tcDesign = s.testCaseDesign || 0;
-    const tcExecuted = s.testCaseExecuted || 0;
-    const tcRate = tcTotal > 0 ? (tcExecuted / tcTotal) * 100 : 0;
-    if (tcTotal > 0) {
-        let tcMsg = `<b>Test Cases Execution Coverage</b> (${tcTotal} total): Design (Not Executed): ${tcDesign} (${((tcDesign/tcTotal)*100).toFixed(1)}%), Executed: ${tcExecuted} (${tcRate.toFixed(1)}%). `;
-        const statusCounts = s.testCaseStatusCounts || {};
-        let statusParts = [];
-        for (let status in statusCounts) {
-            const count = statusCounts[status];
-            if (status !== 'Design') {
-                const pct = ((count / tcTotal) * 100).toFixed(1);
-                statusParts.push(`${status}: ${count} (${pct}%)`);
-            }
-        }
-        if (statusParts.length) {
-            tcMsg += `Distribution: ${statusParts.join(', ')}.`;
-        }
-        if (tcRate >= 100) tcMsg += ` ✅ All test cases executed.`;
-        else if (tcRate >= 90) tcMsg += ` ✅ High execution rate (≥90%).`;
-        else if (tcRate >= 70) tcMsg += ` ⚠️ Moderate execution rate, consider executing remaining tests.`;
-        else tcMsg += ` ❌ Low execution rate, need immediate attention.`;
+    const tcTotal = s.testCaseTotal||0, tcDesign = s.testCaseDesign||0, tcExecuted = s.testCaseExecuted||0, tcRate = tcTotal>0?(tcExecuted/tcTotal)*100:0;
+    if (tcTotal>0) {
+        let tcMsg = `<b>Test Cases Execution Coverage</b> (${tcTotal} total): Design: ${tcDesign} (${((tcDesign/tcTotal)*100).toFixed(1)}%), Executed: ${tcExecuted} (${tcRate.toFixed(1)}%). `;
+        const statusCounts = s.testCaseStatusCounts||{};
+        let parts = [];
+        for (let status in statusCounts) if (status!=='Design') parts.push(`${status}: ${statusCounts[status]} (${((statusCounts[status]/tcTotal)*100).toFixed(1)}%)`);
+        if (parts.length) tcMsg += `Distribution: ${parts.join(', ')}.`;
+        tcMsg += tcRate>=100?' ✅ All executed.' : tcRate>=90?' ✅ High execution.' : tcRate>=70?' ⚠️ Moderate execution.' : ' ❌ Low execution.';
         insights.push(`<li>${tcMsg}</li>`);
     }
 
     // Bug Categories
-    if (s.bugCategories && s.bugCategories.length > 0) {
-        const categoryCount = {};
-        s.bugCategories.forEach(cat => {
-            categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-        });
+    if (s.bugCategories && s.bugCategories.length>0) {
+        const catCount = {};
+        s.bugCategories.forEach(c => catCount[c]=(catCount[c]||0)+1);
         const total = s.bugCategories.length;
-        let categoriesStr = '';
-        for (let cat in categoryCount) {
-            const pct = ((categoryCount[cat] / total) * 100).toFixed(1);
-            categoriesStr += `${cat}: ${pct}%, `;
-        }
-        if (categoriesStr.length > 0) {
-            categoriesStr = categoriesStr.slice(0, -2);
-            const explanation = `Based on ${total} bug titles, classified by keywords (UI, DB, Performance, Logic, Other)`;
-            insights.push(`<li><b>Bug Categories</b> ${infoIcon(explanation)}: ${categoriesStr} (based on ${total} bugs).</li>`);
-        }
+        let str = '';
+        for (let c in catCount) str += `${c}: ${((catCount[c]/total)*100).toFixed(1)}%, `;
+        if (str) insights.push(`<li><b>Bug Categories</b> ${infoIcon(`Based on ${total} bug titles`)}: ${str.slice(0,-2)}.</li>`);
     }
 
     // Bug Severity Distribution
     const totalBugs = s.bugsCrit + s.bugsHigh + s.bugsMed + s.bugsLow;
-    if (totalBugs > 0) {
-        let bugDist = `<b>Bug Severity Distribution</b>: Critical: ${s.bugsCrit} (${((s.bugsCrit/totalBugs)*100).toFixed(1)}%), High: ${s.bugsHigh} (${((s.bugsHigh/totalBugs)*100).toFixed(1)}%), Medium: ${s.bugsMed} (${((s.bugsMed/totalBugs)*100).toFixed(1)}%), Low: ${s.bugsLow} (${((s.bugsLow/totalBugs)*100).toFixed(1)}%)`;
-        const highSevBugs = s.bugsCrit + s.bugsHigh;
-        if (highSevBugs > 0 && s.bugsCount > 0) {
-            bugDist += ` — High/Critical bugs: ${((highSevBugs/s.bugsCount)*100).toFixed(1)}%`;
-            const highSevReviews = s.revCrit + s.revHigh;
-            if (highSevReviews === 0 && s.reviewCount > 0) {
-                bugDist += ` (Review Blind Spot: Testing detected ${highSevBugs} High/Critical bugs, while Peer Reviews detected 0).`;
-            }
+    if (totalBugs>0) {
+        let bugDist = `<b>Bug Severity</b>: Crit: ${s.bugsCrit} (${((s.bugsCrit/totalBugs)*100).toFixed(1)}%), High: ${s.bugsHigh} (${((s.bugsHigh/totalBugs)*100).toFixed(1)}%), Med: ${s.bugsMed} (${((s.bugsMed/totalBugs)*100).toFixed(1)}%), Low: ${s.bugsLow} (${((s.bugsLow/totalBugs)*100).toFixed(1)}%)`;
+        const highSev = s.bugsCrit+s.bugsHigh;
+        if (highSev>0 && s.bugsCount>0) {
+            bugDist += ` — High/Crit: ${((highSev/s.bugsCount)*100).toFixed(1)}%`;
+            if (s.revCrit+s.revHigh===0 && s.reviewCount>0) bugDist += ` (Review Blind Spot: Testing detected ${highSev}, Peer Reviews 0).`;
         }
         insights.push(`<li>${bugDist}</li>`);
     }
 
-    // Generic vs Specific Bugs
-    const genericCount = s.genericBugCount || 0;
-    const specificCount = s.specificBugCount || 0;
-    const totalBugsGenSpec = genericCount + specificCount;
-    if (totalBugsGenSpec > 0) {
-        const genericRatio = (genericCount / totalBugsGenSpec) * 100;
-        const specificRatio = (specificCount / totalBugsGenSpec) * 100;
-        const explanation = `Generic = ${genericCount} (${genericRatio.toFixed(1)}%), Specific = ${specificCount} (${specificRatio.toFixed(1)}%)`;
-        insights.push(`<li><b>Generic vs Specific Bugs</b> ${infoIcon(explanation)}: Generic: ${genericCount} (${genericRatio.toFixed(1)}%), Specific: ${specificCount} (${specificRatio.toFixed(1)}%).</li>`);
+    // Generic vs Specific
+    const gen = s.genericBugCount||0, spec = s.specificBugCount||0, totalGS = gen+spec;
+    if (totalGS>0) {
+        insights.push(`<li><b>Generic vs Specific Bugs</b> ${infoIcon(`Generic: ${gen} (${((gen/totalGS)*100).toFixed(1)}%), Specific: ${spec} (${((spec/totalGS)*100).toFixed(1)}%)`)}: Generic ${gen} (${((gen/totalGS)*100).toFixed(1)}%), Specific ${spec} (${((spec/totalGS)*100).toFixed(1)}%).</li>`);
     }
 
     // Top Story by Total Bugs
     if (s.bugDistributionByStory) {
-        const storyIds = Object.keys(s.bugDistributionByStory);
-        if (storyIds.length > 0) {
-            let maxStory = null;
-            let maxCount = 0;
-            let totalBugsAllStories = 0;
-            for (let id in s.bugDistributionByStory) {
-                const count = s.bugDistributionByStory[id];
-                totalBugsAllStories += count;
-                if (count > maxCount) {
-                    maxCount = count;
-                    maxStory = id;
-                }
-            }
-            if (maxStory && maxCount > 0) {
-                const percentage = ((maxCount / totalBugsAllStories) * 100).toFixed(1);
-                const explanation = `Total bugs across all stories = ${totalBugsAllStories}, Story '${maxStory}' has ${maxCount} bugs (${percentage}% of total bugs)`;
-                insights.push(`<li><b>Top Story by Total Bugs</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest bug count with ${maxCount} bugs (${percentage}% of total bugs).</li>`);
-            }
+        let maxStory=null, maxCount=0, totalAll=0;
+        for (let id in s.bugDistributionByStory) {
+            const c = s.bugDistributionByStory[id];
+            totalAll += c;
+            if (c>maxCount) { maxCount=c; maxStory=id; }
+        }
+        if (maxStory && maxCount>0) {
+            insights.push(`<li><b>Top Story by Total Bugs</b> ${infoIcon(`Story '${maxStory}' has ${maxCount} bugs (${((maxCount/totalAll)*100).toFixed(1)}% of total)`)}: Story <b>${maxStory}</b> (${maxCount} bugs, ${((maxCount/totalAll)*100).toFixed(1)}%).</li>`);
         }
     }
 
     // Top Story by Critical/High Bugs
     if (s.bugSeverityByStory) {
-        const storyIds = Object.keys(s.bugSeverityByStory);
-        if (storyIds.length > 0) {
-            let maxStory = null;
-            let maxHighCount = 0;
-            let totalHighBugsAllStories = 0;
-            for (let id in s.bugSeverityByStory) {
-                const sev = s.bugSeverityByStory[id];
-                const highCount = (sev.critical || 0) + (sev.high || 0);
-                totalHighBugsAllStories += highCount;
-                if (highCount > maxHighCount) {
-                    maxHighCount = highCount;
-                    maxStory = id;
-                }
-            }
-            if (maxStory && maxHighCount > 0) {
-                const percentage = ((maxHighCount / totalHighBugsAllStories) * 100).toFixed(1);
-                const explanation = `Total Critical/High bugs across all stories = ${totalHighBugsAllStories}, Story '${maxStory}' has ${maxHighCount} Critical/High bugs (${percentage}% of total Critical/High bugs)`;
-                insights.push(`<li><b>Top Story by Critical/High Bugs</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest number of Critical/High bugs (${maxHighCount} bugs, ${percentage}% of total Critical/High bugs).</li>`);
-            }
+        let maxStory=null, maxHigh=0, totalHigh=0;
+        for (let id in s.bugSeverityByStory) {
+            const sev = s.bugSeverityByStory[id];
+            const high = (sev.critical||0)+(sev.high||0);
+            totalHigh += high;
+            if (high>maxHigh) { maxHigh=high; maxStory=id; }
+        }
+        if (maxStory && maxHigh>0) {
+            insights.push(`<li><b>Top Story by Critical/High Bugs</b> ${infoIcon(`Story '${maxStory}' has ${maxHigh} Critical/High bugs (${((maxHigh/totalHigh)*100).toFixed(1)}% of total)`)}: Story <b>${maxStory}</b> (${maxHigh} Critical/High, ${((maxHigh/totalHigh)*100).toFixed(1)}%).</li>`);
         }
     }
 
     // ========== NEW REVIEW ANALYTICS ==========
-
-    // Review Categories (using the new scoring-based classification)
-    if (s.reviewCategories && s.reviewCategories.length > 0) {
-        const categoryCount = {};
-        s.reviewCategories.forEach(cat => {
-            categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-        });
+    // Review Categories
+    if (s.reviewCategories && s.reviewCategories.length>0) {
+        const catCount = {};
+        s.reviewCategories.forEach(c => catCount[c]=(catCount[c]||0)+1);
         const total = s.reviewCategories.length;
-        let categoriesStr = '';
-        for (let cat in categoryCount) {
-            const pct = ((categoryCount[cat] / total) * 100).toFixed(1);
-            categoriesStr += `${cat}: ${pct}%, `;
-        }
-        if (categoriesStr.length > 0) {
-            categoriesStr = categoriesStr.slice(0, -2);
-            const explanation = `Based on ${total} review titles, classified by Scoring algorithm (Validation, Business Logic, DB, API, Architecture, Performance, Security, UI, Reports, Naming, Code Quality, Testing)`;
-            insights.push(`<li><b>Review Categories</b> ${infoIcon(explanation)}: ${categoriesStr} (based on ${total} reviews).</li>`);
-        }
+        let str = '';
+        for (let c in catCount) str += `${c}: ${((catCount[c]/total)*100).toFixed(1)}%, `;
+        if (str) insights.push(`<li><b>Review Categories</b> ${infoIcon(`Based on ${total} review titles`)}: ${str.slice(0,-2)}.</li>`);
     }
 
     // Top Story by Total Reviews
     if (s.reviewDistributionByStory) {
-        const storyIds = Object.keys(s.reviewDistributionByStory);
-        if (storyIds.length > 0) {
-            let maxStory = null;
-            let maxCount = 0;
-            let totalReviewsAllStories = 0;
-            for (let id in s.reviewDistributionByStory) {
-                const count = s.reviewDistributionByStory[id];
-                totalReviewsAllStories += count;
-                if (count > maxCount) {
-                    maxCount = count;
-                    maxStory = id;
-                }
-            }
-            if (maxStory && maxCount > 0) {
-                const percentage = ((maxCount / totalReviewsAllStories) * 100).toFixed(1);
-                const explanation = `Total reviews across all stories = ${totalReviewsAllStories}, Story '${maxStory}' has ${maxCount} reviews (${percentage}% of total reviews)`;
-                insights.push(`<li><b>Top Story by Total Reviews</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest review count with ${maxCount} reviews (${percentage}% of total reviews).</li>`);
-            }
+        let maxStory=null, maxCount=0, totalAll=0;
+        for (let id in s.reviewDistributionByStory) {
+            const c = s.reviewDistributionByStory[id];
+            totalAll += c;
+            if (c>maxCount) { maxCount=c; maxStory=id; }
+        }
+        if (maxStory && maxCount>0) {
+            insights.push(`<li><b>Top Story by Total Reviews</b> ${infoIcon(`Story '${maxStory}' has ${maxCount} reviews (${((maxCount/totalAll)*100).toFixed(1)}% of total)`)}: Story <b>${maxStory}</b> (${maxCount} reviews, ${((maxCount/totalAll)*100).toFixed(1)}%).</li>`);
         }
     }
 
     // Top Story by Critical/High Reviews
     if (s.reviewSeverityByStory) {
-        const storyIds = Object.keys(s.reviewSeverityByStory);
-        if (storyIds.length > 0) {
-            let maxStory = null;
-            let maxHighCount = 0;
-            let totalHighReviewsAllStories = 0;
-            for (let id in s.reviewSeverityByStory) {
-                const sev = s.reviewSeverityByStory[id];
-                const highCount = (sev.critical || 0) + (sev.high || 0);
-                totalHighReviewsAllStories += highCount;
-                if (highCount > maxHighCount) {
-                    maxHighCount = highCount;
-                    maxStory = id;
-                }
-            }
-            if (maxStory && maxHighCount > 0) {
-                const percentage = ((maxHighCount / totalHighReviewsAllStories) * 100).toFixed(1);
-                const explanation = `Total Critical/High reviews across all stories = ${totalHighReviewsAllStories}, Story '${maxStory}' has ${maxHighCount} Critical/High reviews (${percentage}% of total Critical/High reviews)`;
-                insights.push(`<li><b>Top Story by Critical/High Reviews</b> ${infoIcon(explanation)}: Story <b>${maxStory}</b> has the highest number of Critical/High reviews (${maxHighCount} reviews, ${percentage}% of total Critical/High reviews).</li>`);
-            }
+        let maxStory=null, maxHigh=0, totalHigh=0;
+        for (let id in s.reviewSeverityByStory) {
+            const sev = s.reviewSeverityByStory[id];
+            const high = (sev.critical||0)+(sev.high||0);
+            totalHigh += high;
+            if (high>maxHigh) { maxHigh=high; maxStory=id; }
+        }
+        if (maxStory && maxHigh>0) {
+            insights.push(`<li><b>Top Story by Critical/High Reviews</b> ${infoIcon(`Story '${maxStory}' has ${maxHigh} Critical/High reviews (${((maxHigh/totalHigh)*100).toFixed(1)}% of total)`)}: Story <b>${maxStory}</b> (${maxHigh} Critical/High, ${((maxHigh/totalHigh)*100).toFixed(1)}%).</li>`);
         }
     }
 
     // Review Severity Distribution
     const totalReviews = s.revCrit + s.revHigh + s.revMed + s.revLow;
-    if (totalReviews > 0) {
-        const revDist = `<b>Review Severity Distribution</b>: Critical: ${s.revCrit} (${((s.revCrit/totalReviews)*100).toFixed(1)}%), High: ${s.revHigh} (${((s.revHigh/totalReviews)*100).toFixed(1)}%), Medium: ${s.revMed} (${((s.revMed/totalReviews)*100).toFixed(1)}%), Low: ${s.revLow} (${((s.revLow/totalReviews)*100).toFixed(1)}%)`;
-        insights.push(`<li>${revDist}</li>`);
+    if (totalReviews>0) {
+        insights.push(`<li><b>Review Severity</b>: Crit: ${s.revCrit} (${((s.revCrit/totalReviews)*100).toFixed(1)}%), High: ${s.revHigh} (${((s.revHigh/totalReviews)*100).toFixed(1)}%), Med: ${s.revMed} (${((s.revMed/totalReviews)*100).toFixed(1)}%), Low: ${s.revLow} (${((s.revLow/totalReviews)*100).toFixed(1)}%)</li>`);
     }
 
-    // ========== ORIGINAL ANALYTICS (unchanged) ==========
-
-    const totalIssues = s.bugsCount + s.reviewCount;
-    const reviewCatchRate = totalIssues > 0 ? (s.reviewCount / totalIssues) * 100 : 0;
-    const highSevBugs = s.bugsCrit + s.bugsHigh;
-    const highSevReviews = s.revCrit + s.revHigh;
-    const avgTimePerBug = s.bugsCount > 0 ? (s.reworkTime / s.bugsCount) : 0;
+    // ===== بقية التحليلات الأصلية (نفس الكود) =====
+    // Rework-Driven Slippage
     const effortVariance = s.totalEst > 0 ? ((s.totalAct - s.totalEst) / s.totalEst) * 100 : 0;
     const combinedReworkRatio = ((s.reworkTime + s.reviewTime) / (s.totalAct || 1)) * 100;
     const avgCycleTime = s.totalStories > 0 ? (s.totalCycleTime / s.totalStories) : 0;
     const totalAllBugsLocal = s.bugsCount + (s.totalUatBugs || 0);
     const calculatedDre = totalAllBugsLocal > 0 ? (s.bugsCount / totalAllBugsLocal) * 100 : 100;
+    const highSevBugs = s.bugsCrit + s.bugsHigh;
+    const highSevReviews = s.revCrit + s.revHigh;
+    const avgTimePerBug = s.bugsCount > 0 ? (s.reworkTime / s.bugsCount) : 0;
     const bugSeverityRatio = s.bugsCount > 0 ? (highSevBugs / s.bugsCount) * 100 : 0;
     const reviewSeverityRatio = s.reviewCount > 0 ? (highSevReviews / s.reviewCount) * 100 : 0;
     const uatLeakageRatio = totalAllBugsLocal > 0 ? ((s.totalUatBugs || 0) / totalAllBugsLocal) * 100 : 0;
 
-    // Rework-Driven Slippage
     if (effortVariance > 15 && combinedReworkRatio > 15) {
-        const explanation = `Effort Variance = (Actual - Estimate)/Estimate * 100 = ${((s.totalAct - s.totalEst) / s.totalEst * 100).toFixed(1)}%, Rework Ratio = (ReworkTime+ReviewTime)/Actual * 100 = ${combinedReworkRatio.toFixed(1)}%`;
-        insights.push(`<li><b>Rework-Driven Slippage</b> ${infoIcon(explanation)}: Effort Variance is ${effortVariance.toFixed(1)}% and Rework Ratio is ${combinedReworkRatio.toFixed(1)}%.</li>`);
+        insights.push(`<li><b>Rework-Driven Slippage</b> ${infoIcon(`Effort Variance = ${effortVariance.toFixed(1)}%, Rework Ratio = ${combinedReworkRatio.toFixed(1)}%`)}: Effort Variance is ${effortVariance.toFixed(1)}% and Rework Ratio is ${combinedReworkRatio.toFixed(1)}%.</li>`);
     } else if (effortVariance > 15 && combinedReworkRatio <= 15) {
-        const explanation = `Effort Variance = ${effortVariance.toFixed(1)}% (Actual ${s.totalAct.toFixed(1)}h vs Estimate ${s.totalEst.toFixed(1)}h), Rework/Review = ${combinedReworkRatio.toFixed(1)}%`;
-        insights.push(`<li><b>Estimation Model Baseline Flaw</b> ${infoIcon(explanation)}: Effort Variance is ${effortVariance.toFixed(1)}% while Rework/Review metrics are ${combinedReworkRatio.toFixed(1)}%.</li>`);
+        insights.push(`<li><b>Estimation Model Baseline Flaw</b> ${infoIcon(`Effort Variance = ${effortVariance.toFixed(1)}%`)}: Effort Variance is ${effortVariance.toFixed(1)}% while Rework/Review metrics are ${combinedReworkRatio.toFixed(1)}%.</li>`);
     } else if (effortVariance <= 0 && combinedReworkRatio > 20) {
-        const explanation = `Effort Variance = ${effortVariance.toFixed(1)}% (under budget), Rework Density = ${combinedReworkRatio.toFixed(1)}%`;
-        insights.push(`<li><b>Aggressive Coding & Velocity Risk</b> ${infoIcon(explanation)}: Effort Variance is ${effortVariance.toFixed(1)}% and Rework Density is ${combinedReworkRatio.toFixed(1)}%.</li>`);
+        insights.push(`<li><b>Aggressive Coding & Velocity Risk</b> ${infoIcon(`Effort Variance = ${effortVariance.toFixed(1)}%, Rework Density = ${combinedReworkRatio.toFixed(1)}%`)}: Effort Variance is ${effortVariance.toFixed(1)}% and Rework Density is ${combinedReworkRatio.toFixed(1)}%.</li>`);
     }
 
-    // Degraded Quality Shield
     if (calculatedDre < 85 && (s.totalUatBugs || 0) > 0) {
-        const explanation = `DRE = Bugs / (Bugs+UAT) * 100 = ${s.bugsCount} / ${totalAllBugsLocal} * 100 = ${calculatedDre.toFixed(1)}%, UAT Leakages = ${s.totalUatBugs}`;
-        insights.push(`<li><b>Degraded Quality Shield (Low DRE)</b> ${infoIcon(explanation)}: DRE is ${calculatedDre.toFixed(1)}% with ${s.totalUatBugs} UAT Leakages out of ${totalAllBugsLocal} total defects.</li>`);
+        insights.push(`<li><b>Degraded Quality Shield (Low DRE)</b> ${infoIcon(`DRE = ${calculatedDre.toFixed(1)}%, UAT Leakages = ${s.totalUatBugs}`)}: DRE is ${calculatedDre.toFixed(1)}% with ${s.totalUatBugs} UAT Leakages.</li>`);
     }
 
-    // Rework Friction
     if (avgTimePerBug > 4 && s.bugsCount > 0) {
-        const explanation = `MTTR = ReworkTime / Bugs = ${s.reworkTime.toFixed(1)}h / ${s.bugsCount} = ${avgTimePerBug.toFixed(1)}h/bug`;
-        insights.push(`<li><b>Rework Friction</b> ${infoIcon(explanation)}: Mean Time to Resolve (MTTR) is ${avgTimePerBug.toFixed(1)}h/bug (total rework ${s.reworkTime.toFixed(1)}h / ${s.bugsCount} bugs).</li>`);
+        insights.push(`<li><b>Rework Friction</b> ${infoIcon(`MTTR = ${avgTimePerBug.toFixed(1)}h/bug`)}: Mean Time to Resolve is ${avgTimePerBug.toFixed(1)}h/bug (total rework ${s.reworkTime.toFixed(1)}h / ${s.bugsCount} bugs).</li>`);
         if (avgCycleTime > 5) {
-            const explanation2 = `Cycle Time = ${avgCycleTime.toFixed(1)} days, MTTR = ${avgTimePerBug.toFixed(1)}h/bug`;
-            insights.push(`<li><b>Blocked Cycle Time Correlation</b> ${infoIcon(explanation2)}: Cycle Time is ${avgCycleTime.toFixed(1)} days, MTTR is ${avgTimePerBug.toFixed(1)}h.</li>`);
+            insights.push(`<li><b>Blocked Cycle Time Correlation</b> ${infoIcon(`Cycle Time = ${avgCycleTime.toFixed(1)} days, MTTR = ${avgTimePerBug.toFixed(1)}h/bug`)}: Cycle Time is ${avgCycleTime.toFixed(1)} days, MTTR is ${avgTimePerBug.toFixed(1)}h.</li>`);
         }
     }
 
-    // High-Fidelity Pre-Emptive Review
     if (reviewSeverityRatio > 40 && bugSeverityRatio < 15 && s.reviewCount > 0) {
-        const explanation = `High-Sev Review = ${reviewSeverityRatio.toFixed(1)}% (${highSevReviews} reviews), High-Sev Testing = ${bugSeverityRatio.toFixed(1)}%`;
-        insights.push(`<li><b>High-Fidelity Pre-Emptive Review</b> ${infoIcon(explanation)}: High-Sev Review is ${reviewSeverityRatio.toFixed(1)}%, High-Sev Testing Bugs is ${bugSeverityRatio.toFixed(1)}%.</li>`);
+        insights.push(`<li><b>High-Fidelity Pre-Emptive Review</b> ${infoIcon(`High-Sev Review = ${reviewSeverityRatio.toFixed(1)}%, High-Sev Testing = ${bugSeverityRatio.toFixed(1)}%`)}: High-Sev Review is ${reviewSeverityRatio.toFixed(1)}%, High-Sev Testing Bugs is ${bugSeverityRatio.toFixed(1)}%.</li>`);
     }
 
-    // Superficial Peer-Review Pattern
     if (s.reviewCount > 10 && highSevReviews === 0 && bugSeverityRatio > 40) {
-        const explanation = `Reviews = ${s.reviewCount}, High-Sev Reviews = 0, Testing High-Sev = ${bugSeverityRatio.toFixed(1)}%`;
-        insights.push(`<li><b>Superficial Peer-Review Pattern</b> ${infoIcon(explanation)}: ${s.reviewCount} Peer Reviews, 0 high-sev issues detected, while Testing high-sev is ${bugSeverityRatio.toFixed(1)}%.</li>`);
+        insights.push(`<li><b>Superficial Peer-Review Pattern</b> ${infoIcon(`Reviews = ${s.reviewCount}, High-Sev Reviews = 0, Testing High-Sev = ${bugSeverityRatio.toFixed(1)}%`)}: ${s.reviewCount} Peer Reviews, 0 high-sev issues detected, while Testing high-sev is ${bugSeverityRatio.toFixed(1)}%.</li>`);
     }
 
-    // Hidden Rework & Timesheet Inaccuracy
     if (effortVariance > 25 && combinedReworkRatio < 5 && s.bugsCount > 0) {
-        const explanation = `Effort Variance = ${effortVariance.toFixed(1)}%, logged Rework/Review = ${combinedReworkRatio.toFixed(1)}%`;
-        insights.push(`<li><b>Hidden Rework & Timesheet Inaccuracy</b> ${infoIcon(explanation)}: Effort Variance is ${effortVariance.toFixed(1)}%, logged Rework/Review is ${combinedReworkRatio.toFixed(1)}%.</li>`);
+        insights.push(`<li><b>Hidden Rework & Timesheet Inaccuracy</b> ${infoIcon(`Effort Variance = ${effortVariance.toFixed(1)}%, logged Rework/Review = ${combinedReworkRatio.toFixed(1)}%`)}: Effort Variance is ${effortVariance.toFixed(1)}%, logged Rework/Review is ${combinedReworkRatio.toFixed(1)}%.</li>`);
     }
 
-    // Severe Architectural Coupling
     if (s.bugsCount > 0 && s.bugsCount <= 3 && avgTimePerBug > 8) {
-        const explanation = `Bugs = ${s.bugsCount}, MTTR = ${avgTimePerBug.toFixed(1)}h`;
-        insights.push(`<li><b>Severe Architectural Coupling</b> ${infoIcon(explanation)}: ${s.bugsCount} bugs, MTTR is ${avgTimePerBug.toFixed(1)}h.</li>`);
+        insights.push(`<li><b>Severe Architectural Coupling</b> ${infoIcon(`Bugs = ${s.bugsCount}, MTTR = ${avgTimePerBug.toFixed(1)}h`)}: ${s.bugsCount} bugs, MTTR is ${avgTimePerBug.toFixed(1)}h.</li>`);
     }
 
-    // Severe Quality Gate Escape
     if (uatLeakageRatio > 25 && s.bugsCount > 0) {
-        const explanation = `UAT Leakages / Total Defects * 100 = ${s.totalUatBugs} / ${totalAllBugsLocal} * 100 = ${uatLeakageRatio.toFixed(1)}%`;
-        insights.push(`<li><b>Severe Quality Gate Escape</b> ${infoIcon(explanation)}: UAT Leakages are ${uatLeakageRatio.toFixed(1)}% of total defects (${s.totalUatBugs} UAT / ${totalAllBugsLocal} total).</li>`);
+        insights.push(`<li><b>Severe Quality Gate Escape</b> ${infoIcon(`UAT Leakages = ${s.totalUatBugs} / ${totalAllBugsLocal} = ${uatLeakageRatio.toFixed(1)}%`)}: UAT Leakages are ${uatLeakageRatio.toFixed(1)}% of total defects.</li>`);
     }
 
-    // Resource Skew & Test Bottleneck
     if (s.devCountCount > 0 && s.testerCountCount > 0) {
         const devToTesterRatio = s.devCountCount / s.testerCountCount;
         if (devToTesterRatio > 3 && s.totalUatBugs > 2) {
-            const explanation = `Dev FTE = ${s.devCountCount.toFixed(2)}, Tester FTE = ${s.testerCountCount.toFixed(2)}, Ratio = ${devToTesterRatio.toFixed(1)}:1, UAT = ${s.totalUatBugs}`;
-            insights.push(`<li><b>Resource Skew & Test Bottleneck</b> ${infoIcon(explanation)}: Dev-to-Tester ratio is ${devToTesterRatio.toFixed(1)}:1, UAT bugs is ${s.totalUatBugs}.</li>`);
+            insights.push(`<li><b>Resource Skew & Test Bottleneck</b> ${infoIcon(`Dev-to-Tester ratio = ${devToTesterRatio.toFixed(1)}:1, UAT = ${s.totalUatBugs}`)}: Dev-to-Tester ratio is ${devToTesterRatio.toFixed(1)}:1, UAT bugs is ${s.totalUatBugs}.</li>`);
         }
     }
 
-    // Repeated Bug Titles
     if (s.bugTitles && s.bugTitles.length > 0) {
         const titleFreq = {};
         s.bugTitles.forEach(title => {
@@ -1608,133 +1629,12 @@ function generateAdvancedQualityAnalysis(s) {
         const duplicates = Object.keys(titleFreq).filter(key => titleFreq[key] > 1);
         if (duplicates.length > 0) {
             const dupSummary = duplicates.slice(0, 3).map(key => `"${key}" (${titleFreq[key]}x)`).join(', ');
-            const explanation = `Total titles = ${s.bugTitles.length}, duplicates = ${duplicates.length}`;
-            insights.push(`<li><b>Repeated Bug Titles</b> ${infoIcon(explanation)}: ${duplicates.length} duplicate titles found. Top repeats: ${dupSummary}.</li>`);
+            insights.push(`<li><b>Repeated Bug Titles</b> ${infoIcon(`Total titles = ${s.bugTitles.length}, duplicates = ${duplicates.length}`)}: ${duplicates.length} duplicate titles found. Top repeats: ${dupSummary}.</li>`);
         }
     }
 
-    // ===== Fallback =====
-    if (insights.length === 0) {
-        return "<li><b>Balanced Quality Lifecycle</b> <span style=\"cursor:help; font-size:0.8em; color:#888; margin-left:4px;\" title=\"No metrics exceeded thresholds\">ⓘ</span>: No anomalies detected. All metrics are within typical ranges.</li>";
-    }
-
+    if (insights.length === 0) return "<li><b>Balanced Quality Lifecycle</b> ⓘ: No anomalies detected. All metrics are within typical ranges.</li>";
     return insights.join('');
-}
-
-function renderPeopleView() {
-    const container = document.getElementById('people-view');
-    if (!container) return;
-
-    const businessAreas = {};
-
-    processedStories.forEach(us => {
-        const area = us.businessArea || 'General';
-        if (!businessAreas[area]) businessAreas[area] = {};
-        const peopleMap = businessAreas[area];
-        const isReport = us.title && us.title.toLowerCase().includes("patient reports");
-
-        us.tasks.forEach(t => {
-            const person = t['Assigned To'];
-            if (!person) return;
-            if (!peopleMap[person]) {
-                peopleMap[person] = {
-                    name: person,
-                    devHours: 0,
-                    testHours: 0,
-                    dbHours: 0,
-                    stories: new Set(),
-                    reportStories: new Set(),
-                    genericBugs: { count: 0, hours: 0 },
-                    specificBugs: { count: 0, hours: 0 },
-                    reviews: { count: 0, hours: 0 }
-                };
-            }
-            const actDev = parseFloat(t['TimeSheet_DevActualTime']) || 0;
-            const actTest = parseFloat(t['TimeSheet_TestingActualTime']) || 0;
-            const activity = t['Activity'];
-            if (activity === 'Testing') peopleMap[person].testHours += actTest;
-            else if (activity === 'DB Modification') peopleMap[person].dbHours += actDev;
-            else if (activity === 'Development') peopleMap[person].devHours += actDev;
-            peopleMap[person].stories.add(us.id);
-            if (isReport) peopleMap[person].reportStories.add(us.id);
-        });
-
-        const devLead = us.devLead;
-        if (devLead && peopleMap[devLead]) {
-            peopleMap[devLead].genericBugs.count += us.rework.generic.count;
-            peopleMap[devLead].genericBugs.hours += us.rework.generic.actualTime;
-            peopleMap[devLead].specificBugs.count += us.rework.specific.count;
-            peopleMap[devLead].specificBugs.hours += us.rework.specific.actualTime;
-        }
-    });
-
-    let html = `
-        <div style="direction: ltr; text-align: left; font-family: 'Segoe UI', sans-serif;">
-            <h2 style="margin-bottom:30px; color: #123b63; border-left: 6px solid #3498db; padding-left: 20px;">👥 Team Performance by Business Area</h2>`;
-
-    for (let area in businessAreas) {
-        html += `
-            <div class="area-section" style="margin-bottom: 50px; border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fcfcfc;">
-                <h3 style="background: #2980b9; padding: 12px 20px; border-radius: 5px; color: white; margin-top: 0;">🏢 Business Area: ${area}</h3>`;
-
-        const allPeople = Object.values(businessAreas[area]);
-        const devs = allPeople.filter(p => p.devHours > 0);
-        const testers = allPeople.filter(p => p.testHours > 0);
-        const dbs = allPeople.filter(p => p.dbHours > 0);
-
-        const renderRoleTable = (title, peopleList, color) => {
-            if (peopleList.length === 0) return '';
-            let tableHtml = `
-                <div style="margin-top: 25px;">
-                    <h4 style="color: ${color}; border-bottom: 2px solid ${color}; display: inline-block; padding-bottom: 5px;">${title}</h4>
-                    <div class="table-container" style="overflow-x:auto; margin-top: 10px;">
-                        <table style="width:100%; border-collapse: collapse; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <thead>
-                                <tr style="background: ${color}; color: Black;">
-                                    <th style="padding: 12px; text-align: left;">Name</th>
-                                    <th style="padding: 12px; text-align: center;">Stories</th>
-                                    <th style="padding: 12px; text-align: center;">Reports</th>
-                                    <th style="padding: 12px; text-align: center;">Dev Hours</th>
-                                    <th style="padding: 12px; text-align: center;">Test Hours</th>
-                                    <th style="padding: 12px; text-align: center;">DB Hours</th>
-                                    <th style="padding: 12px; text-align: center;">Spec. Bugs</th>
-                                    <th style="padding: 12px; text-align: center;">Gen. Bugs</th>
-                                    <th style="padding: 12px; text-align: center;">Total</th>
-                                  </tr>
-                            </thead>
-                            <tbody>`;
-            peopleList.forEach(p => {
-                const totalWork = p.devHours + p.testHours + p.dbHours;
-                tableHtml += `
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px; font-weight: bold; color: #34495e;">${p.name}</td>
-                        <td style="padding: 10px; text-align: center;">${p.stories.size}</td>
-                        <td style="padding: 10px; text-align: center; font-weight: bold; color: #2980b9; background: #f0f7ff;">${p.reportStories.size}</td>
-                        <td style="padding: 10px; text-align: center;">${p.devHours.toFixed(1)}h</td>
-                        <td style="padding: 10px; text-align: center;">${p.testHours.toFixed(1)}h</td>
-                        <td style="padding: 10px; text-align: center;">${p.dbHours.toFixed(1)}h</td>
-                        <td style="padding: 10px; text-align: center; background: #fff5f5;">
-                            <span style="color: #c0392b; font-weight:bold;">${p.specificBugs.count}</span>
-                            <br><small style="color: #666;">${p.specificBugs.hours.toFixed(1)}h</small>
-                        </td>
-                        <td style="padding: 10px; text-align: center; background: #fffaf5;">
-                            <span style="color: #d35400; font-weight:bold;">${p.genericBugs.count}</span>
-                            <br><small style="color: #666;">${p.genericBugs.hours.toFixed(1)}h</small>
-                        </td>
-                        <td style="padding: 10px; text-align: center; font-weight: bold;">${totalWork.toFixed(1)}h</td>
-                    </tr>`;
-            });
-            tableHtml += `</tbody>table</div></div>`;
-            return tableHtml;
-        };
-
-        html += renderRoleTable('💻 Development Team', devs, '#2c3e50');
-        html += renderRoleTable('🧪 Testing Team', testers, '#27ae60');
-        html += renderRoleTable('🗄️ Database Team', dbs, '#8e44ad');
-        html += `</div>`;
-    }
-    html += `</div>`;
-    container.innerHTML = html;
 }
 
 function renderNotTestedView() {
