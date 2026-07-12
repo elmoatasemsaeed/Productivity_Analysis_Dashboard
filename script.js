@@ -947,552 +947,727 @@ function renderBusinessView() {
     container.innerHTML = html;
 }
 
-// ================================================================
-// 1. HELPER FUNCTIONS (Text Normalization, Stemming, Regex Escape)
-// ================================================================
-
 /**
- * Escape special characters in a string for use in RegExp
+ * ============================================================================
+ *  ENTERPRISE HYBRID RULE ENGINE FOR CODE REVIEW CLASSIFICATION
+ * ============================================================================
+ *  Architecture Overview (SOLID Principles):
+ *  1. Config Layer      - Keywords, Patterns, Synonyms, Priorities (Extensible)
+ *  2. Normalizer        - Case splitting, punctuation stripping, synonym mapping
+ *  3. Tokenizer         - Extracts meaningful tokens from normalized text
+ *  4. PatternMatcher    - High-priority context patterns (regex-based)
+ *  5. KeywordScorer     - Weighted keyword matching with graduated bonuses
+ *  6. PriorityResolver  - Override rules for critical issues
+ *  7. ConflictResolver  - Deterministic tie-breaking
+ *  8. ConfidenceEngine  - Calculates confidence percentage
+ *  9. Classifier Facade - Public API (backward compatible)
+ * ============================================================================
  */
-function escapeRegex(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
-/**
- * Normalize text: lowercase, remove punctuation, unify hyphens/underscores, trim spaces
- */
-function normalizeText(text) {
-    if (!text) return '';
-    // Convert to lowercase
-    let normalized = text.toLowerCase();
-    // Replace underscores and hyphens with space
-    normalized = normalized.replace(/[_\u2010-\u2015]/g, ' ');
-    // Remove punctuation (keep letters, digits, spaces)
-    normalized = normalized.replace(/[^\w\s]/g, ' ');
-    // Collapse multiple spaces and trim
-    normalized = normalized.replace(/\s+/g, ' ').trim();
-    return normalized;
-}
+(function (global) {
+    'use strict';
 
-/**
- * Simple stemming: remove common suffixes (ing, ed, ion, ation, ization, etc.)
- * This is a basic rule-based stemmer, not perfect but good for matching.
- */
-function stemWord(word) {
-    if (!word) return '';
-    // Remove common suffixes
-    const suffixes = [
-        { suffix: 'ization', stem: 'ize' },
-        { suffix: 'isation', stem: 'ise' },
-        { suffix: 'ation', stem: 'ate' },
-        { suffix: 'tion', stem: 't' },
-        { suffix: 'sion', stem: 's' },
-        { suffix: 'ing', stem: '' },
-        { suffix: 'ed', stem: '' },
-        { suffix: 'er', stem: '' },
-        { suffix: 'or', stem: '' },
-        { suffix: 'al', stem: '' },
-        { suffix: 'y', stem: '' },
-        { suffix: 'ies', stem: 'y' },
-        { suffix: 'es', stem: '' },
-        { suffix: 's', stem: '' }
-    ];
-    for (let { suffix, stem } of suffixes) {
-        if (word.endsWith(suffix) && word.length > suffix.length + 2) {
-            return word.slice(0, -suffix.length) + stem;
-        }
-    }
-    return word;
-}
+    // ========================================================================
+    //  1. CONFIGURATION LAYER (Extensible)
+    // ========================================================================
 
-/**
- * Check if a token is a common generic word (not strong indicator)
- */
-const GENERIC_WORDS = new Set([
-    'update', 'fix', 'change', 'modify', 'review', 'add', 'remove',
-    'delete', 'create', 'implement', 'improve', 'enhance', 'adjust',
-    'correct', 'resolve', 'address', 'handle', 'process', 'apply',
-    'set', 'get', 'make', 'do', 'work', 'need', 'want'
-]);
-
-// ================================================================
-// 2. DEFINITION OF CATEGORIES WITH KEYWORDS (MERGED OLD + NEW)
-// ================================================================
-
-const REVIEW_CATEGORIES = {
-    "Validation": {
-        keywords: [
-            // Existing keywords (old)
-            { word: "validation", weight: 5 },
-            { word: "validate", weight: 4 },
-            { word: "validator", weight: 5 },
-            { word: "required", weight: 4 },
-            { word: "null", weight: 3 },
-            { word: "empty", weight: 3 },
-            { word: "mandatory", weight: 4 },
-            { word: "check", weight: 2 },
-            { word: "verify", weight: 3 },
-            { word: "condition", weight: 4 },
-            { word: "constraint", weight: 5 },
-            { word: "range", weight: 3 },
-            // New keywords
-            { word: "nullable", weight: 3 },
-            { word: "not null", weight: 4 },
-            { word: "maxlength", weight: 3 },
-            { word: "minlength", weight: 3 },
-            { word: "regex", weight: 5 },
-            { word: "duplicate", weight: 4 },
-            { word: "unique", weight: 4 },
-            { word: "exists", weight: 3 },
-            { word: "requiredif", weight: 4 },
-            { word: "invalid", weight: 3 },
+    /**
+     * Merge of OLD + NEW keywords.
+     * Structure: { category: [ { word, weight }, ... ] }
+     */
+    const KEYWORDS_CONFIG = {
+        "Validation": [
+            { word: "validation", weight: 5 }, { word: "validate", weight: 4 },
+            { word: "validator", weight: 5 }, { word: "required", weight: 4 },
+            { word: "null", weight: 4 }, { word: "empty", weight: 4 },
+            { word: "mandatory", weight: 4 }, { word: "check", weight: 2 },
+            { word: "verify", weight: 3 }, { word: "condition", weight: 3 },
+            { word: "constraint", weight: 5 }, { word: "range", weight: 3 },
+            { word: "maxlength", weight: 3 }, { word: "minlength", weight: 3 },
+            { word: "nullable", weight: 4 }, { word: "not null", weight: 4 },
+            { word: "regex", weight: 5 }, { word: "duplicate", weight: 4 },
+            { word: "unique", weight: 4 }, { word: "exists", weight: 3 },
+            { word: "requiredif", weight: 4 }, { word: "invalid", weight: 3 },
             { word: "sanitization", weight: 4 }
-        ]
-    },
-    "Business Logic": {
-        keywords: [
-            // Existing
-            { word: "logic", weight: 5 },
-            { word: "rule", weight: 4 },
-            { word: "workflow", weight: 5 },
-            { word: "business", weight: 4 },
-            { word: "calculation", weight: 5 },
-            { word: "formula", weight: 4 },
-            { word: "process", weight: 3 },
-            { word: "decision", weight: 4 },
-            { word: "status", weight: 3 },
-            { word: "transition", weight: 4 },
-            // New
-            { word: "domain", weight: 5 },
-            { word: "approval", weight: 4 },
-            { word: "state", weight: 3 },
-            { word: "eligibility", weight: 4 },
-            { word: "rule engine", weight: 5 },
-            { word: "business rule", weight: 5 }
-        ]
-    },
-    "Database": {
-        keywords: [
-            // Existing
-            { word: "sql", weight: 4 },
-            { word: "database", weight: 5 },
-            { word: "db", weight: 3 },
-            { word: "table", weight: 3 },
-            { word: "column", weight: 2 },
-            { word: "query", weight: 4 },
-            { word: "entity", weight: 3 },
-            { word: "repository", weight: 5 },
-            { word: "dbcontext", weight: 5 },
-            { word: "migration", weight: 4 },
-            { word: "index", weight: 3 },
-            { word: "join", weight: 3 },
-            { word: "foreign key", weight: 5 },
-            { word: "primary key", weight: 5 },
-            { word: "stored procedure", weight: 5 },
-            { word: "view", weight: 3 },
-            // New
-            { word: "entity framework", weight: 5 },
-            { word: "transaction", weight: 5 },
-            { word: "trigger", weight: 4 },
-            { word: "sequence", weight: 3 },
-            { word: "normalization", weight: 4 },
-            { word: "deadlock", weight: 5 },
-            { word: "indexing", weight: 4 }
-        ]
-    },
-    "API & Integration": {
-        keywords: [
-            // Existing
-            { word: "api", weight: 5 },
-            { word: "endpoint", weight: 5 },
-            { word: "request", weight: 4 },
-            { word: "response", weight: 4 },
-            { word: "json", weight: 3 },
-            { word: "xml", weight: 3 },
-            { word: "rest", weight: 4 },
-            { word: "soap", weight: 4 },
-            { word: "integration", weight: 5 },
-            { word: "mapping", weight: 3 },
-            { word: "serializer", weight: 4 },
-            { word: "deserializer", weight: 4 },
-            { word: "contract", weight: 5 },
-            { word: "interface", weight: 4 },
-            // New
-            { word: "grpc", weight: 5 },
-            { word: "webhook", weight: 5 },
-            { word: "swagger", weight: 5 },
-            { word: "openapi", weight: 5 },
-            { word: "serialization", weight: 4 },
-            { word: "deserialization", weight: 4 },
-            { word: "payload", weight: 4 },
-            { word: "http", weight: 3 },
-            { word: "https", weight: 3 },
-            { word: "postman", weight: 4 },
+        ],
+        "Business Logic": [
+            { word: "logic", weight: 5 }, { word: "rule", weight: 5 },
+            { word: "workflow", weight: 5 }, { word: "business", weight: 5 },
+            { word: "calculation", weight: 5 }, { word: "formula", weight: 4 },
+            { word: "process", weight: 4 }, { word: "decision", weight: 4 },
+            { word: "status", weight: 3 }, { word: "transition", weight: 4 },
+            { word: "domain", weight: 5 }, { word: "approval", weight: 4 },
+            { word: "state", weight: 3 }, { word: "eligibility", weight: 4 },
+            { word: "rule engine", weight: 5 }, { word: "business rule", weight: 5 }
+        ],
+        "Database": [
+            { word: "sql", weight: 4 }, { word: "database", weight: 5 },
+            { word: "db", weight: 4 }, { word: "table", weight: 3 },
+            { word: "column", weight: 2 }, { word: "query", weight: 4 },
+            { word: "entity", weight: 4 }, { word: "repository", weight: 5 },
+            { word: "dbcontext", weight: 5 }, { word: "migration", weight: 4 },
+            { word: "index", weight: 4 }, { word: "join", weight: 3 },
+            { word: "foreign key", weight: 5 }, { word: "primary key", weight: 5 },
+            { word: "stored procedure", weight: 5 }, { word: "view", weight: 3 },
+            { word: "trigger", weight: 4 }, { word: "sequence", weight: 3 },
+            { word: "constraint", weight: 4 }, { word: "normalization", weight: 4 },
+            { word: "deadlock", weight: 5 }, { word: "indexing", weight: 4 },
+            { word: "entity framework", weight: 5 }, { word: "transaction", weight: 5 }
+        ],
+        "API & Integration": [
+            { word: "api", weight: 5 }, { word: "endpoint", weight: 5 },
+            { word: "request", weight: 4 }, { word: "response", weight: 4 },
+            { word: "json", weight: 4 }, { word: "xml", weight: 4 },
+            { word: "rest", weight: 5 }, { word: "soap", weight: 5 },
+            { word: "integration", weight: 5 }, { word: "mapping", weight: 4 },
+            { word: "serializer", weight: 5 }, { word: "deserializer", weight: 5 },
+            { word: "contract", weight: 5 }, { word: "interface", weight: 4 },
+            { word: "grpc", weight: 5 }, { word: "webhook", weight: 5 },
+            { word: "swagger", weight: 5 }, { word: "openapi", weight: 5 },
+            { word: "serialization", weight: 5 }, { word: "deserialization", weight: 5 },
+            { word: "payload", weight: 4 }, { word: "http", weight: 3 },
+            { word: "https", weight: 3 }, { word: "postman", weight: 4 },
             { word: "api versioning", weight: 5 }
-        ]
-    },
-    "Architecture": {
-        keywords: [
-            // Existing
-            { word: "service", weight: 4 },
-            { word: "factory", weight: 5 },
-            { word: "dependency", weight: 4 },
-            { word: "inject", weight: 4 },
-            { word: "architecture", weight: 5 },
-            { word: "layer", weight: 3 },
-            { word: "dto", weight: 4 },
-            { word: "model", weight: 3 },
-            { word: "controller", weight: 4 },
-            { word: "manager", weight: 3 },
-            { word: "handler", weight: 4 },
-            { word: "provider", weight: 4 },
-            { word: "adapter", weight: 5 },
-            { word: "mediator", weight: 5 },
-            { word: "strategy", weight: 5 },
-            // New
-            { word: "solid", weight: 5 },
-            { word: "ioc", weight: 5 },
-            { word: "dependency injection", weight: 5 },
-            { word: "cqrs", weight: 5 },
-            { word: "builder", weight: 5 },
-            { word: "singleton", weight: 5 },
-            { word: "repository pattern", weight: 5 },
-            { word: "service layer", weight: 5 },
-            { word: "abstraction", weight: 5 }
-        ]
-    },
-    "Performance": {
-        keywords: [
-            // Existing
-            { word: "performance", weight: 5 },
-            { word: "optimize", weight: 4 },
-            { word: "optimization", weight: 4 },
-            { word: "cache", weight: 4 },
-            { word: "memory", weight: 4 },
-            { word: "cpu", weight: 3 },
-            { word: "timeout", weight: 4 },
-            { word: "slow", weight: 3 },
-            { word: "parallel", weight: 4 },
-            { word: "thread", weight: 3 },
-            { word: "async", weight: 4 },
-            { word: "await", weight: 4 },
-            { word: "bulk", weight: 4 },
-            { word: "batch", weight: 3 },
-            // New
-            { word: "latency", weight: 5 },
-            { word: "throughput", weight: 5 },
-            { word: "response time", weight: 5 },
-            { word: "memory leak", weight: 5 },
-            { word: "allocation", weight: 4 },
-            { word: "profiling", weight: 4 },
-            { word: "bottleneck", weight: 5 },
-            { word: "gc", weight: 4 },
-            { word: "parallelism", weight: 4 },
-            { word: "lazy loading", weight: 5 },
+        ],
+        "Architecture": [
+            { word: "service", weight: 4 }, { word: "factory", weight: 5 },
+            { word: "dependency", weight: 4 }, { word: "inject", weight: 5 },
+            { word: "architecture", weight: 5 }, { word: "layer", weight: 4 },
+            { word: "dto", weight: 4 }, { word: "model", weight: 3 },
+            { word: "controller", weight: 4 }, { word: "manager", weight: 4 },
+            { word: "handler", weight: 4 }, { word: "provider", weight: 4 },
+            { word: "adapter", weight: 5 }, { word: "mediator", weight: 5 },
+            { word: "strategy", weight: 5 }, { word: "solid", weight: 5 },
+            { word: "ioc", weight: 5 }, { word: "dependency injection", weight: 5 },
+            { word: "cqrs", weight: 5 }, { word: "builder", weight: 5 },
+            { word: "singleton", weight: 5 }, { word: "repository pattern", weight: 5 },
+            { word: "service layer", weight: 5 }, { word: "abstraction", weight: 5 }
+        ],
+        "Performance": [
+            { word: "performance", weight: 5 }, { word: "optimize", weight: 5 },
+            { word: "optimization", weight: 5 }, { word: "cache", weight: 4 },
+            { word: "slow", weight: 4 }, { word: "timeout", weight: 4 },
+            { word: "memory", weight: 4 }, { word: "cpu", weight: 4 },
+            { word: "parallel", weight: 4 }, { word: "thread", weight: 4 },
+            { word: "async", weight: 4 }, { word: "await", weight: 4 },
+            { word: "bulk", weight: 4 }, { word: "batch", weight: 4 },
+            { word: "latency", weight: 5 }, { word: "throughput", weight: 5 },
+            { word: "response time", weight: 5 }, { word: "memory leak", weight: 5 },
+            { word: "allocation", weight: 4 }, { word: "profiling", weight: 4 },
+            { word: "bottleneck", weight: 5 }, { word: "gc", weight: 4 },
+            { word: "parallelism", weight: 4 }, { word: "lazy loading", weight: 5 },
             { word: "bulk insert", weight: 5 }
-        ]
-    },
-    "Security": {
-        keywords: [
-            // Existing
-            { word: "security", weight: 5 },
-            { word: "permission", weight: 4 },
-            { word: "role", weight: 3 },
-            { word: "authentication", weight: 5 },
-            { word: "authorization", weight: 5 },
-            { word: "encrypt", weight: 4 },
-            { word: "decrypt", weight: 4 },
-            { word: "token", weight: 4 },
-            { word: "jwt", weight: 5 },
-            { word: "access", weight: 3 },
-            { word: "identity", weight: 4 },
-            // New
-            { word: "csrf", weight: 5 },
-            { word: "xss", weight: 5 },
-            { word: "sql injection", weight: 5 },
-            { word: "cors", weight: 4 },
-            { word: "cookie", weight: 3 },
-            { word: "session", weight: 3 },
-            { word: "credential", weight: 4 },
-            { word: "secret", weight: 5 },
-            { word: "hash", weight: 4 },
-            { word: "salt", weight: 4 },
-            { word: "oauth", weight: 5 },
-            { word: "bearer", weight: 4 },
-            { word: "encryption", weight: 5 }
-        ]
-    },
-    "UI": {
-        keywords: [
-            // Existing
-            { word: "ui", weight: 5 },
-            { word: "ux", weight: 5 },
-            { word: "screen", weight: 3 },
-            { word: "page", weight: 3 },
-            { word: "button", weight: 3 },
-            { word: "layout", weight: 3 },
-            { word: "css", weight: 3 },
-            { word: "html", weight: 3 },
-            { word: "javascript", weight: 4 },
-            { word: "jquery", weight: 4 },
-            { word: "frontend", weight: 4 },
-            { word: "popup", weight: 3 },
-            { word: "dialog", weight: 3 },
-            { word: "grid", weight: 3 },
-            { word: "form", weight: 3 },
-            // New
-            { word: "react", weight: 5 },
-            { word: "angular", weight: 5 },
-            { word: "vue", weight: 5 },
-            { word: "blazor", weight: 5 },
-            { word: "bootstrap", weight: 4 },
-            { word: "responsive", weight: 4 },
-            { word: "alignment", weight: 3 },
-            { word: "spacing", weight: 2 },
-            { word: "icon", weight: 2 },
-            { word: "modal", weight: 4 },
-            { word: "tooltip", weight: 3 },
-            { word: "dropdown", weight: 3 },
-            { word: "datatable", weight: 4 },
-            { word: "textbox", weight: 3 },
-            { word: "combobox", weight: 3 },
+        ],
+        "Security": [
+            { word: "security", weight: 5 }, { word: "permission", weight: 4 },
+            { word: "role", weight: 4 }, { word: "authentication", weight: 5 },
+            { word: "authorization", weight: 5 }, { word: "encrypt", weight: 5 },
+            { word: "decrypt", weight: 5 }, { word: "token", weight: 4 },
+            { word: "jwt", weight: 5 }, { word: "access", weight: 4 },
+            { word: "identity", weight: 4 }, { word: "csrf", weight: 5 },
+            { word: "xss", weight: 5 }, { word: "sql injection", weight: 5 },
+            { word: "cors", weight: 4 }, { word: "cookie", weight: 3 },
+            { word: "session", weight: 3 }, { word: "credential", weight: 4 },
+            { word: "secret", weight: 5 }, { word: "hash", weight: 4 },
+            { word: "salt", weight: 4 }, { word: "oauth", weight: 5 },
+            { word: "bearer", weight: 4 }, { word: "encryption", weight: 5 }
+        ],
+        "UI": [
+            { word: "ui", weight: 5 }, { word: "ux", weight: 5 },
+            { word: "screen", weight: 4 }, { word: "page", weight: 4 },
+            { word: "button", weight: 3 }, { word: "layout", weight: 4 },
+            { word: "css", weight: 4 }, { word: "html", weight: 4 },
+            { word: "javascript", weight: 4 }, { word: "jquery", weight: 4 },
+            { word: "frontend", weight: 5 }, { word: "popup", weight: 4 },
+            { word: "dialog", weight: 4 }, { word: "grid", weight: 4 },
+            { word: "form", weight: 3 }, { word: "react", weight: 5 },
+            { word: "angular", weight: 5 }, { word: "vue", weight: 5 },
+            { word: "blazor", weight: 5 }, { word: "bootstrap", weight: 4 },
+            { word: "responsive", weight: 4 }, { word: "alignment", weight: 3 },
+            { word: "spacing", weight: 2 }, { word: "icon", weight: 2 },
+            { word: "modal", weight: 4 }, { word: "tooltip", weight: 3 },
+            { word: "dropdown", weight: 3 }, { word: "datatable", weight: 4 },
+            { word: "textbox", weight: 3 }, { word: "combobox", weight: 3 },
             { word: "tab", weight: 3 }
-        ]
-    },
-    "Reports": {
-        keywords: [
-            // Existing
-            { word: "report", weight: 5 },
-            { word: "print", weight: 3 },
-            { word: "pdf", weight: 4 },
-            { word: "excel", weight: 4 },
-            { word: "export", weight: 3 },
-            { word: "import", weight: 3 },
-            { word: "dashboard", weight: 5 },
-            { word: "chart", weight: 4 },
-            { word: "graph", weight: 3 },
-            // New
-            { word: "rdlc", weight: 5 },
-            { word: "ssrs", weight: 5 },
-            { word: "power bi", weight: 5 },
-            { word: "pivot", weight: 4 },
-            { word: "grouping", weight: 3 },
-            { word: "filter", weight: 3 },
-            { word: "aggregation", weight: 4 }
-        ]
-    },
-    "Naming & Standards": {
-        keywords: [
-            // Existing
-            { word: "rename", weight: 3 },
-            { word: "naming", weight: 4 },
-            { word: "convention", weight: 4 },
-            { word: "standard", weight: 4 },
-            { word: "camel", weight: 3 },
-            { word: "pascal", weight: 3 },
-            { word: "coding standard", weight: 5 },
-            { word: "style", weight: 3 },
-            // New
-            { word: "camelcase", weight: 4 },
-            { word: "pascalcase", weight: 4 },
-            { word: "kebab-case", weight: 4 },
-            { word: "snake_case", weight: 4 },
-            { word: "coding guideline", weight: 5 },
-            { word: "formatting", weight: 3 },
-            // Dynamic BD codes (BD001 to BD099)
-            ...Array.from({ length: 99 }, (_, i) => ({ word: `bd${String(i + 1).padStart(2, '0')}`, weight: 5 }))
-        ]
-    },
-    "Code Quality": {
-        keywords: [
-            // Existing
-            { word: "refactor", weight: 5 },
-            { word: "cleanup", weight: 3 },
-            { word: "clean up", weight: 3 },
-            { word: "duplicate", weight: 4 },
-            { word: "duplication", weight: 4 },
-            { word: "remove", weight: 2 },
-            { word: "unused", weight: 3 },
-            { word: "comment", weight: 2 },
-            { word: "simplify", weight: 4 },
-            { word: "improve", weight: 3 },
-            { word: "enhancement", weight: 3 },
-            { word: "readability", weight: 4 },
-            { word: "maintainability", weight: 5 },
-            { word: "complexity", weight: 4 },
-            { word: "magic number", weight: 5 },
-            { word: "hardcode", weight: 4 },
-            { word: "hardcoded", weight: 4 },
-            // New
-            { word: "code smell", weight: 5 },
-            { word: "cyclomatic complexity", weight: 5 },
-            { word: "technical debt", weight: 5 },
-            { word: "duplicate code", weight: 5 },
-            { word: "dead code", weight: 5 },
+        ],
+        "Reports": [
+            { word: "report", weight: 5 }, { word: "print", weight: 4 },
+            { word: "pdf", weight: 4 }, { word: "excel", weight: 5 },
+            { word: "export", weight: 4 }, { word: "import", weight: 4 },
+            { word: "dashboard", weight: 5 }, { word: "chart", weight: 5 },
+            { word: "graph", weight: 5 }, { word: "rdlc", weight: 5 },
+            { word: "ssrs", weight: 5 }, { word: "power bi", weight: 5 },
+            { word: "pivot", weight: 4 }, { word: "grouping", weight: 3 },
+            { word: "filter", weight: 3 }, { word: "aggregation", weight: 4 }
+        ],
+        "Naming & Standards": [
+            { word: "rename", weight: 4 }, { word: "naming", weight: 5 },
+            { word: "convention", weight: 5 }, { word: "standard", weight: 5 },
+            { word: "camel", weight: 4 }, { word: "pascal", weight: 4 },
+            { word: "coding standard", weight: 5 }, { word: "style", weight: 4 },
+            { word: "camelcase", weight: 4 }, { word: "pascalcase", weight: 4 },
+            { word: "kebab-case", weight: 4 }, { word: "snake_case", weight: 4 },
+            { word: "coding guideline", weight: 5 }, { word: "formatting", weight: 3 }
+        ],
+        "Code Quality": [
+            { word: "refactor", weight: 5 }, { word: "cleanup", weight: 4 },
+            { word: "clean up", weight: 4 }, { word: "duplicate", weight: 5 },
+            { word: "duplication", weight: 5 }, { word: "remove", weight: 3 },
+            { word: "unused", weight: 4 }, { word: "comment", weight: 3 },
+            { word: "simplify", weight: 4 }, { word: "improve", weight: 3 },
+            { word: "enhancement", weight: 3 }, { word: "readability", weight: 4 },
+            { word: "maintainability", weight: 5 }, { word: "complexity", weight: 5 },
+            { word: "magic number", weight: 5 }, { word: "hardcode", weight: 5 },
+            { word: "hardcoded", weight: 5 }, { word: "code smell", weight: 5 },
+            { word: "cyclomatic complexity", weight: 5 }, { word: "technical debt", weight: 5 },
+            { word: "duplicate code", weight: 5 }, { word: "dead code", weight: 5 },
             { word: "sonarqube", weight: 5 }
-        ]
-    },
-    "Testing": {
-        keywords: [
-            // Existing
-            { word: "unit test", weight: 5 },
-            { word: "integration test", weight: 5 },
-            { word: "test", weight: 2 }, // generic, low weight
-            { word: "mock", weight: 4 },
-            { word: "coverage", weight: 4 },
-            { word: "assert", weight: 4 },
-            { word: "review report", weight: 3 },
-            { word: "pull request", weight: 3 },
-            { word: "pr", weight: 3 },
-            // New
-            { word: "test case", weight: 5 },
-            { word: "automation", weight: 4 },
-            { word: "selenium", weight: 5 },
-            { word: "stub", weight: 4 },
-            { word: "assertion", weight: 4 },
-            { word: "nunit", weight: 5 },
-            { word: "xunit", weight: 5 },
+        ],
+        "Testing": [
+            { word: "unit test", weight: 5 }, { word: "integration test", weight: 5 },
+            { word: "test", weight: 4 }, { word: "mock", weight: 5 },
+            { word: "coverage", weight: 5 }, { word: "assert", weight: 4 },
+            { word: "review report", weight: 3 }, { word: "pull request", weight: 3 },
+            { word: "pr", weight: 3 }, { word: "test case", weight: 5 },
+            { word: "automation", weight: 4 }, { word: "selenium", weight: 5 },
+            { word: "stub", weight: 4 }, { word: "assertion", weight: 4 },
+            { word: "nunit", weight: 5 }, { word: "xunit", weight: 5 },
             { word: "mstest", weight: 5 }
+        ],
+        // NEW CATEGORIES
+        "Error Handling": [
+            { word: "exception", weight: 5 }, { word: "error", weight: 5 },
+            { word: "fault", weight: 4 }, { word: "swallow", weight: 5 },
+            { word: "catch", weight: 5 }, { word: "throw", weight: 5 },
+            { word: "try", weight: 4 }, { word: "finally", weight: 4 },
+            { word: "handling", weight: 4 }, { word: "failure", weight: 4 },
+            { word: "return empty", weight: 5 }, { word: "exception handling", weight: 5 }
+        ],
+        "Logging": [
+            { word: "log", weight: 5 }, { word: "logging", weight: 5 },
+            { word: "logger", weight: 5 }, { word: "trace", weight: 4 },
+            { word: "debug", weight: 4 }, { word: "info", weight: 4 },
+            { word: "warn", weight: 4 }, { word: "error", weight: 4 },
+            { word: "serilog", weight: 5 }, { word: "nlog", weight: 5 },
+            { word: "log4net", weight: 5 }
+        ],
+        "Concurrency": [
+            { word: "concurrency", weight: 5 }, { word: "parallel", weight: 5 },
+            { word: "thread", weight: 5 }, { word: "async", weight: 5 },
+            { word: "await", weight: 5 }, { word: "deadlock", weight: 5 },
+            { word: "race condition", weight: 5 }, { word: "lock", weight: 5 },
+            { word: "mutex", weight: 5 }, { word: "semaphore", weight: 5 }
+        ],
+        "Resource Management": [
+            { word: "dispose", weight: 5 }, { word: "cleanup", weight: 4 },
+            { word: "close", weight: 4 }, { word: "connection", weight: 4 },
+            { word: "pool", weight: 4 }, { word: "leak", weight: 5 },
+            { word: "release", weight: 4 }, { word: "using", weight: 4 }
+        ],
+        "Configuration": [
+            { word: "config", weight: 5 }, { word: "configuration", weight: 5 },
+            { word: "settings", weight: 5 }, { word: "appsetting", weight: 5 },
+            { word: "connection string", weight: 5 }, { word: "environment", weight: 4 },
+            { word: "variable", weight: 3 }
+        ],
+        "Reliability": [
+            { word: "reliability", weight: 5 }, { word: "stability", weight: 5 },
+            { word: "resilience", weight: 5 }, { word: "retry", weight: 5 },
+            { word: "fallback", weight: 5 }, { word: "circuit breaker", weight: 5 },
+            { word: "timeout", weight: 4 }
+        ],
+        "Maintainability": [
+            { word: "maintainability", weight: 5 }, { word: "tech debt", weight: 5 },
+            { word: "readability", weight: 4 }, { word: "complexity", weight: 4 },
+            { word: "smell", weight: 4 }, { word: "refactoring", weight: 5 }
         ]
+    };
+
+    /**
+     *  High-priority context patterns.
+     *  These override keyword scores and usually map directly to a specific category.
+     */
+    const CONTEXT_PATTERNS = [
+        { regex: /returns?\s+string\s*\.\s*empty/i, category: "Error Handling", weight: 20 },
+        { regex: /returns?\s+null\b/i, category: "Error Handling", weight: 15 },
+        { regex: /returns?\s+default\b/i, category: "Error Handling", weight: 15 },
+        { regex: /silently\s+returns?\b/i, category: "Error Handling", weight: 20 },
+        { regex: /swallow\s+exception/i, category: "Error Handling", weight: 20 },
+        { regex: /catch\s*\{\s*\}/i, category: "Error Handling", weight: 20 },
+        { regex: /throw\s+exception/i, category: "Error Handling", weight: 15 },
+        { regex: /inside\s+loop/i, category: "Performance", weight: 20 },
+        { regex: /querying\s+database\s+inside\s+loop/i, category: "Performance", weight: 25 },
+        { regex: /n\+1\s+query/i, category: "Performance", weight: 25 },
+        { regex: /duplicate\s+code/i, category: "Code Quality", weight: 20 },
+        { regex: /magic\s+number/i, category: "Code Quality", weight: 25 },
+        { regex: /hardcoded\s+value/i, category: "Code Quality", weight: 25 },
+        { regex: /dependency\s+injection/i, category: "Architecture", weight: 20 },
+        { regex: /foreign\s+key/i, category: "Database", weight: 20 },
+        { regex: /sql\s+injection/i, category: "Security", weight: 30 },
+        { regex: /memory\s+leak/i, category: "Performance", weight: 25 },
+        { regex: /dead\s+code/i, category: "Code Quality", weight: 20 },
+        { regex: /race\s+condition/i, category: "Concurrency", weight: 25 },
+        { regex: /connection\s+string/i, category: "Configuration", weight: 20 }
+    ];
+
+    /**
+     *  Synonym Engine: Normalizes variations to a single canonical token.
+     *  Used during preprocessing.
+     */
+    const SYNONYM_MAP = {
+        // Returns
+        'returns': 'return', 'returned': 'return', 'returning': 'return',
+        // Errors
+        'failure': 'error', 'fault': 'error', 'exception': 'error',
+        // Persist
+        'save': 'persist', 'stores': 'persist', 'storing': 'persist',
+        'insert': 'persist', 'saved': 'persist', 'inserted': 'persist',
+        // Query
+        'queries': 'query', 'querying': 'query', 'queried': 'query',
+        // Validate
+        'validated': 'validate', 'validating': 'validate', 'validation': 'validate'
+    };
+
+    // ========================================================================
+    //  2. UTILITY FUNCTIONS (Helpers)
+    // ========================================================================
+
+    /**
+     * Escapes special regex characters to safely handle patterns like "C#", "C++", "ASP.NET".
+     */
+    function escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
-};
 
-// ================================================================
-// 3. MAIN CLASSIFICATION FUNCTION
-// ================================================================
+    /**
+     * Converts a word/phrase to a safe regex pattern, handling boundary matching.
+     * For single tokens, uses \b word boundaries.
+     * For multi-token phrases, uses a whitespace-insensitive pattern.
+     */
+    function wordToRegex(word) {
+        const escaped = escapeRegex(word);
+        if (/\s/.test(word)) {
+            // Phrase: match as a whole, allowing variable whitespace
+            return new RegExp('\\b' + escaped.replace(/\s+/g, '\\s+') + '\\b', 'i');
+        }
+        return new RegExp('\\b' + escaped + '\\b', 'i');
+    }
 
-/**
- * Classify a review title into one or more categories based on keyword matching.
- * Supports multi-label output if scores are close.
- * @param {string} title - The review title to classify.
- * @returns {string} - Category name or combination like "Database + Performance".
- */
-function classifyReviewTitle(title) {
-    if (!title) return "Code Quality";
+    // ========================================================================
+    //  3. TEXT NORMALIZER
+    // ========================================================================
 
-    // Step 1: Normalize text
-    const normalized = normalizeText(title);
-    if (!normalized) return "Code Quality";
+    const TextNormalizer = {
+        /**
+         * 1. Splits PascalCase/camelCase: "GetActiveBranch" -> "Get Active Branch"
+         * 2. Replaces separators (_, -, .) with spaces.
+         * 3. Removes punctuation.
+         * 4. Applies synonym mapping.
+         * 5. Collapses multiple spaces and trims.
+         */
+        normalize: function (text) {
+            if (!text) return '';
 
-    // Step 2: Tokenize and stem
-    const tokens = normalized.split(/\s+/);
-    const stemmedTokens = tokens.map(token => stemWord(token));
+            // Step 1: Split PascalCase/camelCase
+            let normalized = text.replace(/([a-z])([A-Z])/g, '$1 $2');
 
-    // Step 3: Prepare results per category
-    const categoryScores = {};
+            // Step 2: Replace common separators with spaces
+            normalized = normalized.replace(/[._-]/g, ' ');
 
-    for (const category in REVIEW_CATEGORIES) {
-        let totalScore = 0;
-        let strongMatchCount = 0; // weight >= 4
-        let phraseCount = 0;
-        let matchedWords = [];
+            // Step 3: Remove remaining punctuation (commas, semicolons, brackets, etc.)
+            normalized = normalized.replace(/[^a-zA-Z0-9\s]/g, ' ');
 
-        const entries = REVIEW_CATEGORIES[category].keywords;
-        for (const entry of entries) {
-            let word = entry.word.toLowerCase();
-            const weight = entry.weight;
+            // Step 4: Lowercase for case-insensitive matching
+            normalized = normalized.toLowerCase();
 
-            // Determine if it's a phrase (contains space or hyphen)
-            const isPhrase = /\s|-/.test(word);
+            // Step 5: Apply synonym mapping
+            const tokens = normalized.split(/\s+/);
+            const synonymTokens = tokens.map(token => SYNONYM_MAP[token] || token);
+            normalized = synonymTokens.join(' ');
 
-            // Escape regex and build pattern
-            const escapedWord = escapeRegex(word);
-            // For phrase, match whole phrase with spaces normalized, else whole word boundary
-            let pattern;
-            if (isPhrase) {
-                // Normalize spaces in phrase to allow multiple spaces
-                const phraseParts = word.split(/\s+/);
-                const escapedParts = phraseParts.map(part => escapeRegex(part));
-                const patternStr = escapedParts.join('\\s+');
-                pattern = new RegExp('\\b' + patternStr + '\\b', 'i');
-            } else {
-                pattern = new RegExp('\\b' + escapedWord + '\\b', 'i');
+            // Step 6: Collapse multiple spaces and trim
+            normalized = normalized.replace(/\s+/g, ' ').trim();
+
+            return normalized;
+        },
+
+        /**
+         * Tokenizes the normalized text into an array of unique tokens.
+         */
+        tokenize: function (normalizedText) {
+            if (!normalizedText) return [];
+            return normalizedText.split(/\s+/).filter(t => t.length > 0);
+        }
+    };
+
+    // ========================================================================
+    //  4. CONTEXT PATTERN MATCHER
+    // ========================================================================
+
+    const PatternMatcher = {
+        /**
+         * Precompiles regex patterns for performance.
+         */
+        compiledPatterns: CONTEXT_PATTERNS.map(p => ({
+            ...p,
+            regex: typeof p.regex === 'string' ? new RegExp(p.regex, 'i') : p.regex
+        })),
+
+        /**
+         * Matches the raw (or normalized) text against all patterns.
+         * Returns an array of { category, weight } matches.
+         */
+        match: function (rawText) {
+            const matches = [];
+            for (const pattern of this.compiledPatterns) {
+                if (pattern.regex.test(rawText)) {
+                    matches.push({ category: pattern.category, weight: pattern.weight });
+                }
             }
+            return matches;
+        }
+    };
 
-            // Also check stemmed version for single words
-            let matchFound = false;
-            if (pattern.test(normalized)) {
-                matchFound = true;
-            } else if (!isPhrase) {
-                // Try stemmed match
-                const stemmedWord = stemWord(word);
-                if (stemmedWord !== word) {
-                    const stemPattern = new RegExp('\\b' + escapeRegex(stemmedWord) + '\\b', 'i');
-                    if (stemPattern.test(normalized)) {
-                        matchFound = true;
+    // ========================================================================
+    //  5. KEYWORD SCORER
+    // ========================================================================
+
+    const KeywordScorer = {
+        /**
+         * Precomputes regex patterns for all keywords for performance.
+         * Structure: { category: [ { regex, weight, token }, ... ] }
+         */
+        compiledKeywords: null,
+
+        compile: function () {
+            if (this.compiledKeywords) return;
+            this.compiledKeywords = {};
+            for (const category in KEYWORDS_CONFIG) {
+                this.compiledKeywords[category] = KEYWORDS_CONFIG[category].map(item => ({
+                    regex: wordToRegex(item.word),
+                    weight: item.weight,
+                    token: item.word.toLowerCase()
+                }));
+            }
+        },
+
+        /**
+         * Scores the normalized text against all categories.
+         * Returns an object: { category: { score, matchedCount, strongCount } }
+         */
+        score: function (normalizedText) {
+            this.compile();
+            const results = {};
+
+            for (const category in this.compiledKeywords) {
+                let score = 0;
+                let matchedCount = 0;
+                let strongCount = 0; // Keywords with weight >= 4
+
+                for (const entry of this.compiledKeywords[category]) {
+                    if (entry.regex.test(normalizedText)) {
+                        score += entry.weight;
+                        matchedCount++;
+                        if (entry.weight >= 4) strongCount++;
                     }
+                }
+
+                // Graduated Bonus for strong matches (>=2 strong keywords)
+                if (strongCount >= 5) score += 5;
+                else if (strongCount >= 4) score += 4;
+                else if (strongCount >= 3) score += 3;
+                else if (strongCount >= 2) score += 2;
+
+                results[category] = { score, matchedCount, strongCount };
+            }
+            return results;
+        }
+    };
+
+    // ========================================================================
+    //  6. PRIORITY RESOLVER (Override rules)
+    // ========================================================================
+
+    const PriorityResolver = {
+        /**
+         * Specific patterns that force a category override.
+         * Order matters: first match wins.
+         */
+        rules: [
+            { regex: /sql\s+injection/i, category: 'Security' },
+            { regex: /dependency\s+injection/i, category: 'Architecture' },
+            { regex: /memory\s+leak/i, category: 'Performance' },
+            { regex: /magic\s+number/i, category: 'Code Quality' },
+            { regex: /returns?\s+string\s*\.\s*empty/i, category: 'Error Handling' },
+            { regex: /returning\s+string\.empty/i, category: 'Error Handling' },
+            { regex: /n\+1\s+query/i, category: 'Performance' },
+            { regex: /race\s+condition/i, category: 'Concurrency' },
+            { regex: /deadlock/i, category: 'Concurrency' }
+        ],
+
+        /**
+         * Checks if the raw text matches any priority rule.
+         * Returns the overriding category, or null.
+         */
+        getOverride: function (rawText) {
+            for (const rule of this.rules) {
+                if (rule.regex.test(rawText)) {
+                    return rule.category;
+                }
+            }
+            return null;
+        }
+    };
+
+    // ========================================================================
+    //  7. CONFLICT RESOLVER (Deterministic Tie-Breaking)
+    // ========================================================================
+
+    const ConflictResolver = {
+        /**
+         * Resolves ties deterministically.
+         * Criteria (in order):
+         * 1. Higher number of matched keywords.
+         * 2. Higher number of strong matches (weight >= 4).
+         * 3. Alphabetical order (last resort).
+         */
+        resolve: function (candidates) {
+            if (candidates.length === 0) return null;
+            if (candidates.length === 1) return candidates[0];
+
+            // Sort by matchedCount desc, then strongCount desc, then name asc
+            candidates.sort((a, b) => {
+                if (a.matchedCount !== b.matchedCount) return b.matchedCount - a.matchedCount;
+                if (a.strongCount !== b.strongCount) return b.strongCount - a.strongCount;
+                return a.category.localeCompare(b.category);
+            });
+
+            return candidates[0];
+        }
+    };
+
+    // ========================================================================
+    //  8. CONFIDENCE ENGINE
+    // ========================================================================
+
+    const ConfidenceEngine = {
+        /**
+         * Calculates confidence based on:
+         * - Ratio of maxScore to total possible score (weighted by length).
+         * - Number of matched keywords.
+         * - Presence of a pattern match.
+         */
+        calculate: function (category, keywordScore, patternMatches, normalizedText) {
+            let confidence = 0;
+            const tokenCount = normalizedText.split(/\s+/).length;
+
+            // Pattern match gives high base confidence
+            let patternBoost = 0;
+            for (const pm of patternMatches) {
+                if (pm.category === category) {
+                    patternBoost = Math.min(pm.weight, 25);
                 }
             }
 
-            if (matchFound) {
-                totalScore += weight;
-                matchedWords.push(word);
-                if (weight >= 4) strongMatchCount++;
-                if (isPhrase) phraseCount++;
+            // Keyword score contribution
+            const maxPossibleScore = Math.min(tokenCount * 5, 50);
+            const keywordRatio = maxPossibleScore > 0 ? Math.min(keywordScore / maxPossibleScore, 1) : 0;
+
+            // Base confidence: keyword ratio * 70 + pattern boost * 1.2
+            confidence = (keywordRatio * 70) + (patternBoost * 1.2);
+
+            // Cap at 99 to leave room for perfect matches
+            confidence = Math.min(confidence, 99);
+
+            // Minimum confidence floor if anything matched
+            if (keywordScore > 0 || patternBoost > 0) {
+                confidence = Math.max(confidence, 15);
             }
+
+            return Math.round(confidence);
         }
+    };
 
-        // Apply bonus based on number of strong matches
-        let bonus = 0;
-        if (strongMatchCount >= 5) bonus = 5;
-        else if (strongMatchCount >= 4) bonus = 4;
-        else if (strongMatchCount >= 3) bonus = 3;
-        else if (strongMatchCount >= 2) bonus = 2;
+    // ========================================================================
+    //  9. MAIN CLASSIFIER FACADE
+    // ========================================================================
 
-        totalScore += bonus;
+    const Classifier = {
+        /**
+         * Internal classification that returns detailed result object.
+         */
+        classifyDetailed: function (title) {
+            if (!title || typeof title !== 'string') {
+                return { category: 'Code Quality', confidence: 0, matchedPatterns: [], matchedKeywords: [] };
+            }
 
-        // Store results
-        categoryScores[category] = {
-            score: totalScore,
-            strongMatches: strongMatchCount,
-            phraseCount: phraseCount,
-            matchedWords: matchedWords
+            // Step 1: Normalize and tokenize
+            const normalized = TextNormalizer.normalize(title);
+            const tokens = TextNormalizer.tokenize(normalized);
+
+            // Step 2: Check Priority Rules (overrides)
+            const override = PriorityResolver.getOverride(title);
+            if (override) {
+                return {
+                    category: override,
+                    confidence: 95,
+                    matchedPatterns: [{ category: override, weight: 30 }],
+                    matchedKeywords: []
+                };
+            }
+
+            // Step 3: Context Pattern Matching
+            const patternMatches = PatternMatcher.match(title);
+
+            // Step 4: Keyword Scoring
+            const keywordScores = KeywordScorer.score(normalized);
+
+            // Step 5: Aggregate scores (Keyword + Pattern)
+            const aggregated = {};
+            for (const category in keywordScores) {
+                const kw = keywordScores[category];
+                aggregated[category] = {
+                    score: kw.score,
+                    matchedCount: kw.matchedCount,
+                    strongCount: kw.strongCount,
+                    keywordScore: kw.score
+                };
+            }
+
+            // Add pattern scores to aggregated
+            for (const pm of patternMatches) {
+                if (!aggregated[pm.category]) {
+                    aggregated[pm.category] = {
+                        score: 0,
+                        matchedCount: 0,
+                        strongCount: 0,
+                        keywordScore: 0
+                    };
+                }
+                aggregated[pm.category].score += pm.weight;
+                // Patterns count as 'strong' matches for tie-breaking
+                aggregated[pm.category].strongCount += 1;
+                aggregated[pm.category].matchedCount += 1;
+            }
+
+            // Step 6: Find max score and collect candidates within threshold
+            let maxScore = 0;
+            const candidates = [];
+            for (const category in aggregated) {
+                const data = aggregated[category];
+                if (data.score > maxScore) maxScore = data.score;
+            }
+
+            // If no score, fallback to Code Quality
+            if (maxScore === 0) {
+                return { category: 'Code Quality', confidence: 10, matchedPatterns: [], matchedKeywords: [] };
+            }
+
+            // Collect all categories within 80% of maxScore (dynamic threshold)
+            const threshold = maxScore * 0.8;
+            for (const category in aggregated) {
+                const data = aggregated[category];
+                if (data.score >= threshold) {
+                    candidates.push({
+                        category: category,
+                        score: data.score,
+                        matchedCount: data.matchedCount,
+                        strongCount: data.strongCount,
+                        keywordScore: data.keywordScore || 0
+                    });
+                }
+            }
+
+            // Step 7: Resolve conflicts deterministically
+            const winner = ConflictResolver.resolve(candidates);
+
+            if (!winner) {
+                return { category: 'Code Quality', confidence: 10, matchedPatterns: [], matchedKeywords: [] };
+            }
+
+            // Step 8: Calculate confidence
+            const confidence = ConfidenceEngine.calculate(
+                winner.category,
+                winner.keywordScore || 0,
+                patternMatches,
+                normalized
+            );
+
+            // Step 9: Build matched patterns for debugging
+            const matchedPatterns = patternMatches.filter(p => p.category === winner.category);
+
+            // Step 10: Multi-label support - if 2nd candidate is very close, append it
+            let finalCategory = winner.category;
+            if (candidates.length > 1) {
+                const second = candidates[1];
+                if (second && (winner.score - second.score) <= 2) {
+                    finalCategory = winner.category + ' + ' + second.category;
+                }
+            }
+
+            return {
+                category: finalCategory,
+                confidence: confidence,
+                matchedPatterns: matchedPatterns,
+                matchedKeywords: [] // Optionally add matched keywords here
+            };
+        }
+    };
+
+    // ========================================================================
+    //  10. PUBLIC API (Backward Compatible)
+    // ========================================================================
+
+    /**
+     * Legacy / Public function.
+     * Returns a string representing the category.
+     * Keeps backward compatibility with existing code.
+     */
+    function classifyReviewTitle(title) {
+        const result = Classifier.classifyDetailed(title);
+        return result.category;
+    }
+
+    /**
+     * Advanced function to get detailed classification result.
+     * Returns: { category, confidence, matchedPatterns, matchedKeywords }
+     */
+    function classifyReviewTitleAdvanced(title) {
+        return Classifier.classifyDetailed(title);
+    }
+
+    // ========================================================================
+    //  EXPOSE TO GLOBAL SCOPE (Node.js / Browser)
+    // ========================================================================
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = {
+            classifyReviewTitle,
+            classifyReviewTitleAdvanced,
+            // Expose internals for testing/extensibility
+            TextNormalizer,
+            PatternMatcher,
+            KeywordScorer,
+            PriorityResolver,
+            ConflictResolver,
+            ConfidenceEngine,
+            CONTEXT_PATTERNS,
+            KEYWORDS_CONFIG,
+            SYNONYM_MAP
         };
+    } else {
+        global.classifyReviewTitle = classifyReviewTitle;
+        global.classifyReviewTitleAdvanced = classifyReviewTitleAdvanced;
     }
 
-    // Step 4: Find max score and collect categories within threshold
-    let maxScore = -1;
-    for (const cat in categoryScores) {
-        if (categoryScores[cat].score > maxScore) {
-            maxScore = categoryScores[cat].score;
-        }
+    // Keep the original variable binding if it existed
+    if (typeof window !== 'undefined') {
+        window.classifyReviewTitle = classifyReviewTitle;
+        window.classifyReviewTitleAdvanced = classifyReviewTitleAdvanced;
     }
 
-    if (maxScore === 0) {
-        // Fallback: if no strong match, check for common generic words
-        if (tokens.some(t => GENERIC_WORDS.has(t))) {
-            return "Code Quality";
-        }
-        return "Code Quality";
-    }
+})(typeof global !== 'undefined' ? global : typeof window !== 'undefined' ? window : this);
 
-    // Threshold: include categories with score >= maxScore - 1 (i.e., within 1 point)
-    const threshold = maxScore - 1;
-    let topCategories = [];
-    for (const cat in categoryScores) {
-        if (categoryScores[cat].score >= threshold) {
-            topCategories.push(cat);
-        }
-    }
-
-    // If multiple, sort by score desc, then strongMatches desc, then phraseCount desc
-    topCategories.sort((a, b) => {
-        const aScore = categoryScores[a].score;
-        const bScore = categoryScores[b].score;
-        if (aScore !== bScore) return bScore - aScore;
-        const aStrong = categoryScores[a].strongMatches;
-        const bStrong = categoryScores[b].strongMatches;
-        if (aStrong !== bStrong) return bStrong - aStrong;
-        return categoryScores[b].phraseCount - categoryScores[a].phraseCount;
-    });
-
-    // If only one category, return it
-    if (topCategories.length === 1) {
-        return topCategories[0];
-    }
-
-    // If multiple, join with " + "
-    return topCategories.join(" + ");
 }
 
 function renderTeamView() {
