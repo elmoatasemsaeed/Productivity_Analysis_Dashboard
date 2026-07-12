@@ -2656,7 +2656,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
     }
     document.getElementById('filteredChartsMessage').innerText = `Showing detailed trends for: ${selectedArea}`;
 
-    // ---- إضافة عناصر التنبيهات للمخططات المفلترة ----
+    // Create alert divs for filtered control charts if not exist
     ['filteredEvChart', 'filteredRwChart', 'filteredCtChart'].forEach(id => {
         let div = document.getElementById(id + 'Alerts');
         if (!div) {
@@ -2675,7 +2675,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
         }
     });
 
-    // ---- Control Charts للمنطقة المختارة ----
+    // Control charts for filtered area
     const evData = metricsByIteration.map(m => m.effortVariance);
     renderControlChart('filteredEvChart', labels, evData, 'Effort Variance %', '#f39c12', 'Variance %');
     
@@ -2684,6 +2684,28 @@ function renderFilteredCharts(historicalData, selectedArea) {
     
     const ctData = metricsByIteration.map(m => m.avgCycleTime);
     renderControlChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days');
+
+    // ---- NEW: Completed Stories chart for filtered area ----
+    let csCanvas = document.getElementById('filteredCompletedStoriesChart');
+    if (!csCanvas) {
+        csCanvas = document.createElement('canvas');
+        csCanvas.id = 'filteredCompletedStoriesChart';
+        csCanvas.style.maxHeight = '300px';
+        csCanvas.style.width = '100%';
+        // Insert after the last filtered chart (e.g., after filteredCtChart)
+        const lastChart = document.getElementById('filteredCtChart');
+        if (lastChart) {
+            lastChart.parentNode.insertBefore(csCanvas, lastChart.nextSibling);
+        } else {
+            document.getElementById('detailedChartsSection')?.appendChild(csCanvas);
+        }
+    }
+    const completedData = metricsByIteration.map(m => m.completedStories || 0);
+    const totalData = metricsByIteration.map(m => m.totalStories || 0);
+    renderMultiLineChart('filteredCompletedStoriesChart', labels, [
+        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
+        { label: 'Total Stories', data: totalData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
+    ], 'Stories Count');
 
     // Workload with Meeting dashed lines
     const devWorkloadSolid = metricsByIteration.map(m => m.avgDevHours || 0);
@@ -2735,6 +2757,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
         { label: 'Specific Bugs', data: specificBugs, backgroundColor: '#3498db' }
     ], 'Bug Type');
 }
+
 async function syncAllIterationsData() {
     if (!azureConfigs || azureConfigs.length === 0) {
         alert("No Azure iterations configured. Please add queries in Azure Config first.");
@@ -3033,12 +3056,6 @@ function calculateControlLimits(data) {
     // ✅ إرجاع sigma أيضاً لاستخدامها في رسم الخطوط الإضافية
     return { mean, ucl, lcl, sigma };
 }
-/**
- * رسم مخطط تحكم (Control Chart) باستخدام Chart.js
- * - خط البيانات مع تلوين النقاط الخارجة باللون الأحمر
- * - خطوط UCL, LCL, Mean (متقطعة)
- * - عرض التنبيهات في عنصر HTML يحمل id = canvasId + 'Alerts'
- */
 function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -3051,32 +3068,27 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
 
     const { mean, ucl, lcl, sigma } = calculateControlLimits(data);
 
-    // --- حساب خطوط المناطق ---
     const oneSigmaUp = mean + sigma;
     const oneSigmaDown = mean - sigma;
     const twoSigmaUp = mean + 2 * sigma;
     const twoSigmaDown = mean - 2 * sigma;
 
-    // --- تحديد النقاط الخارجة حسب القواعد ---
     const pointColors = data.map(val => {
-        if (val > ucl || val < lcl) return '#e74c3c';      // أحمر: خارج 3σ
-        if (val > twoSigmaUp || val < twoSigmaDown) return '#f39c12'; // برتقالي: خارج 2σ
-        if (val > oneSigmaUp || val < oneSigmaDown) return '#f1c40f'; // أصفر: خارج 1σ
-        return color; // لون طبيعي
+        if (val > ucl || val < lcl) return '#e74c3c';
+        if (val > twoSigmaUp || val < twoSigmaDown) return '#f39c12';
+        if (val > oneSigmaUp || val < oneSigmaDown) return '#f1c40f';
+        return color;
     });
 
-    // --- تحليل قواعد ويسترن إلكتريك (WECO Rules) للتنبيهات ---
     const outOfControl = [];
     const alerts = [];
 
-    // القاعدة 1: أي نقطة خارج ±3σ
     data.forEach((val, i) => {
         if (val > ucl || val < lcl) {
             outOfControl.push({ label: labels[i], value: val, limit: val > ucl ? 'UCL (3σ)' : 'LCL (3σ)' });
         }
     });
 
-    // القاعدة 2: نقطتان من أصل 3 متتالية خارج ±2σ (على نفس الجانب)
     for (let i = 2; i < data.length; i++) {
         const window = [data[i-2], data[i-1], data[i]];
         const above2σ = window.filter(v => v > twoSigmaUp);
@@ -3089,7 +3101,6 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         }
     }
 
-    // القاعدة 3: 4 نقاط من أصل 5 متتالية خارج ±1σ (على نفس الجانب)
     for (let i = 4; i < data.length; i++) {
         const window = [data[i-4], data[i-3], data[i-2], data[i-1], data[i]];
         const above1σ = window.filter(v => v > oneSigmaUp);
@@ -3102,9 +3113,8 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         }
     }
 
-    // القاعدة 4: 7 نقاط متتالية على نفس الجانب من المتوسط (Run Rule)
     let runCount = 0;
-    let runDirection = 0; // 1 for above, -1 for below
+    let runDirection = 0;
     for (let i = 0; i < data.length; i++) {
         if (data[i] > mean) {
             if (runDirection === 1) runCount++;
@@ -3113,17 +3123,16 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             if (runDirection === -1) runCount++;
             else { runDirection = -1; runCount = 1; }
         } else {
-            runCount = 0; // نقطة تساوي المتوسط تكسر الرن
+            runCount = 0;
         }
         if (runCount >= 7) {
             const startIdx = i - runCount + 1;
             const side = runDirection === 1 ? 'above' : 'below';
             alerts.push(`⚠️ Rule 4: 7 consecutive points ${side} the Mean (${labels[startIdx]} to ${labels[i]})`);
-            runCount = 0; // لمنع التكرار
+            runCount = 0;
         }
     }
 
-    // --- إنشاء عنصر التنبيهات ---
     let alertDiv = document.getElementById(canvasId + 'Alerts');
     if (!alertDiv) {
         alertDiv = document.createElement('div');
@@ -3136,19 +3145,13 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         canvas.parentNode.insertBefore(alertDiv, canvas.nextSibling);
     }
 
-    // تحديث محتوى التنبيهات
     let allAlerts = [];
-
-    // تنبيهات ±3σ
     if (outOfControl.length > 0) {
         outOfControl.forEach(p => {
             allAlerts.push(`🔴 ${p.label}: ${p.value.toFixed(1)} exceeds ${p.limit}`);
         });
     }
-
-    // تنبيهات القواعد الإضافية
     if (alerts.length > 0) {
-        // إزالة التكرارات باستخدام Set
         const uniqueAlerts = [...new Set(alerts)];
         allAlerts = allAlerts.concat(uniqueAlerts);
     }
@@ -3160,13 +3163,10 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         alertDiv.style.backgroundColor = '#fff5f5';
         alertDiv.style.borderColor = '#e74c3c';
     } else {
-        alertDiv.innerHTML = '✅ All processes are in control (No WECO rules violated).';
-        alertDiv.style.display = 'block';
-        alertDiv.style.backgroundColor = '#f0faf0';
-        alertDiv.style.borderColor = '#27ae60';
+        // ✅ تم إزالة الرسالة النصية وإخفاء العنصر بالكامل
+        alertDiv.style.display = 'none';
     }
 
-    // --- بناء Datasets للمخطط (بما فيها خطوط ±1σ و ±2σ) ---
     const datasets = [
         {
             label: label,
@@ -3180,7 +3180,6 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             pointRadius: 5,
             pointHoverRadius: 7,
         },
-        // خطوط ±3σ (UCL / LCL) - باللون الأحمر
         {
             label: 'UCL (+3σ)',
             data: Array(labels.length).fill(ucl),
@@ -3201,7 +3200,6 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 2,
         },
-        // خطوط ±2σ - باللون البرتقالي
         {
             label: '+2σ Zone',
             data: Array(labels.length).fill(twoSigmaUp),
@@ -3222,7 +3220,6 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 1.5,
         },
-        // خطوط ±1σ - باللون الرمادي/الأزرق الفاتح
         {
             label: '+1σ Zone',
             data: Array(labels.length).fill(oneSigmaUp),
@@ -3243,7 +3240,6 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 1,
         },
-        // خط المتوسط (Mean) - باللون الأسود الداكن
         {
             label: 'Mean',
             data: Array(labels.length).fill(mean),
@@ -3300,13 +3296,163 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         }
     });
 }
+// ==================== LINEAR REGRESSION & TREND FORECAST ====================
 
-// ==================== UPDATED renderHistoricalAnalyticsView ====================
+function linearRegression(x, y) {
+    const n = x.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (let i = 0; i < n; i++) {
+        sumX += x[i];
+        sumY += y[i];
+        sumXY += x[i] * y[i];
+        sumX2 += x[i] * x[i];
+    }
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return { slope, intercept };
+}
+
+function renderTrendForecastChart(canvasId, labels, data, futurePoints = 3) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    if (window[canvasId + 'Chart']) {
+        window[canvasId + 'Chart'].destroy();
+        delete window[canvasId + 'Chart'];
+    }
+
+    // Prepare numeric indices for regression
+    const indices = data.map((_, i) => i);
+    const { slope, intercept } = linearRegression(indices, data);
+
+    // Generate trend line (fitted values)
+    const trendData = indices.map(i => slope * i + intercept);
+
+    // Generate forecast for future points
+    const lastIndex = indices.length - 1;
+    const forecastIndices = [];
+    const forecastValues = [];
+    for (let i = 1; i <= futurePoints; i++) {
+        const idx = lastIndex + i;
+        forecastIndices.push(idx);
+        forecastValues.push(slope * idx + intercept);
+    }
+
+    // Extend labels for forecast (e.g., "Iteration 5 (Forecast)")
+    const forecastLabels = labels.concat(
+        forecastIndices.map((_, i) => `Forecast ${i+1}`)
+    );
+
+    // Combine data: historical + forecast (for plotting)
+    const fullData = data.concat(forecastValues);
+    const fullLabels = labels.concat(forecastLabels);
+
+    // For trend line, we need values for all points (including forecast)
+    const fullTrend = trendData.concat(forecastValues);
+
+    // Create datasets
+    const datasets = [
+        {
+            label: 'Completed Stories (Historical)',
+            data: data,
+            borderColor: '#2c3e50',
+            backgroundColor: 'transparent',
+            pointBackgroundColor: '#2c3e50',
+            pointBorderColor: '#2c3e50',
+            pointRadius: 5,
+            tension: 0.1,
+            fill: false,
+        },
+        {
+            label: 'Trend Line (Historical)',
+            data: trendData,
+            borderColor: '#e67e22',
+            borderDash: [4, 4],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 2,
+        },
+        {
+            label: 'Forecast Extension',
+            data: fullTrend, // full data with forecast included
+            borderColor: '#e74c3c',
+            borderDash: [6, 3],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 2,
+            // We'll use segment to show only forecast part as dashed?
+            // Simpler: just plot full trend but differentiate via label
+        }
+    ];
+
+    // To make the forecast line appear only from the end, we can use a trick:
+    // We'll create a separate dataset for forecast only (with nulls for earlier points)
+    const forecastOnlyData = Array(labels.length).fill(null).concat(forecastValues);
+    datasets.push({
+        label: 'Forecast (future)',
+        data: forecastOnlyData,
+        borderColor: '#e74c3c',
+        borderDash: [6, 3],
+        backgroundColor: 'transparent',
+        pointRadius: 0,
+        fill: false,
+        borderWidth: 2,
+    });
+
+    // Also add actual forecast points as circles
+    const forecastPoints = Array(labels.length).fill(null).concat(forecastValues);
+    datasets.push({
+        label: 'Forecast Points',
+        data: forecastPoints,
+        borderColor: '#e74c3c',
+        backgroundColor: '#e74c3c',
+        pointRadius: 6,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        showLine: false,
+    });
+
+    window[canvasId + 'Chart'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: fullLabels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.raw;
+                            if (value === null) return null;
+                            return `${label}: ${value.toFixed(1)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    title: { display: true, text: 'Number of Stories' },
+                    beginAtZero: true,
+                },
+                x: {
+                    title: { display: true, text: 'Iteration' }
+                }
+            }
+        }
+    });
+}
+
 async function renderHistoricalAnalyticsView() {
     const container = document.getElementById('historical-analytics-view');
     if (!container) return;
 
-    // Use cached data if available, else load from GitHub
     let historicalData = window.__historicalData;
     if (!historicalData) {
         historicalData = await loadHistoricalSummary();
@@ -3317,7 +3463,6 @@ async function renderHistoricalAnalyticsView() {
         return;
     }
 
-    // Sort according to azureConfigs order (preserve insertion order)
     const configOrder = azureConfigs.map(cfg => cfg.name);
     const orderMap = new Map();
     configOrder.forEach((name, idx) => orderMap.set(name, idx));
@@ -3329,7 +3474,7 @@ async function renderHistoricalAnalyticsView() {
 
     const labels = historicalData.map(d => d.iterationName);
 
-    // ---- إضافة عناصر التنبيهات ديناميكياً (إن لم تكن موجودة) ----
+    // Ensure alert divs exist for control charts
     ['evLineChart', 'rwLineChart', 'ctLineChart'].forEach(id => {
         let div = document.getElementById(id + 'Alerts');
         if (!div) {
@@ -3348,12 +3493,32 @@ async function renderHistoricalAnalyticsView() {
         }
     });
 
-    // ---- Overall Control Charts (always shown) ----
+    // ---- Control Charts ----
     renderControlChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %');
     renderControlChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %');
     renderControlChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days');
 
-    // ---- Multi-line workload chart (Dev, Tester, DB) with meetings as dashed ----
+    // ---- NEW: Completed Stories Chart (Overall) ----
+    // Ensure canvas exists for Completed Stories
+    let csCanvas = document.getElementById('completedStoriesOverallChart');
+    if (!csCanvas) {
+        csCanvas = document.createElement('canvas');
+        csCanvas.id = 'completedStoriesOverallChart';
+        csCanvas.style.maxHeight = '300px';
+        csCanvas.style.width = '100%';
+        // Insert after the last control chart (or after the container of charts)
+        const lastChartContainer = document.querySelector('#historical-analytics-view .card') || container;
+        lastChartContainer.parentNode.insertBefore(csCanvas, lastChartContainer.nextSibling);
+    }
+    // Render completed stories chart (overall)
+    const completedData = historicalData.map(d => d.completedStories || 0);
+    const totalStoriesData = historicalData.map(d => d.totalStories || 0);
+    renderMultiLineChart('completedStoriesOverallChart', labels, [
+        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
+        { label: 'Total Stories', data: totalStoriesData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
+    ], 'Stories Count');
+
+    // ---- Workload Charts (already present) ----
     const devWorkloadSolid = historicalData.map(d => d.avgDevHours || 0);
     const devWorkloadIncl = historicalData.map(d => d.avgDevHoursInclMeetings || 0);
     const testWorkloadSolid = historicalData.map(d => d.avgTestHours || 0);
@@ -3370,7 +3535,7 @@ async function renderHistoricalAnalyticsView() {
         { label: 'DB Specialists + Meeting (avg hours)', data: dbWorkloadIncl, borderColor: '#8e44ad', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#8e44ad', borderDash: [5,5] }
     ], 'Hours per Resource');
 
-    // Resource distribution chart with names (stacked bar)
+    // ---- Resource distribution chart with names ----
     const devCounts = historicalData.map(d => d.devCount || 0);
     const testerCounts = historicalData.map(d => d.testerCount || 0);
     const dbCounts = historicalData.map(d => d.dbCount || 0);
@@ -3383,7 +3548,7 @@ async function renderHistoricalAnalyticsView() {
         { label: 'DB Specialists', data: dbCounts, backgroundColor: '#8e44ad' }
     ], 'Headcount', { developers: devNamesList, testers: testerNamesList, db: dbNamesList });
 
-    // Bug severity distribution (stacked percentage)
+    // ---- Bug severity distribution ----
     const severityCritical = historicalData.map(d => d.bugSeverity?.critical || 0);
     const severityHigh = historicalData.map(d => d.bugSeverity?.high || 0);
     const severityMedium = historicalData.map(d => d.bugSeverity?.medium || 0);
@@ -3395,7 +3560,7 @@ async function renderHistoricalAnalyticsView() {
         { label: 'Low', data: severityLow, backgroundColor: '#2ecc71' }
     ], 'Bug Severity');
 
-    // Bug type distribution (stacked percentage)
+    // ---- Bug type distribution ----
     const genericBugs = historicalData.map(d => d.bugTypeCount?.generic || 0);
     const specificBugs = historicalData.map(d => d.bugTypeCount?.specific || 0);
     renderStackedPercentageBar('bugTypeChart', labels, [
@@ -3403,7 +3568,7 @@ async function renderHistoricalAnalyticsView() {
         { label: 'Specific Bugs', data: specificBugs, backgroundColor: '#3498db' }
     ], 'Bug Type');
 
-    // ---- Business Area filter dropdown ----
+    // ---- Business Area filter ----
     const allAreas = new Set();
     historicalData.forEach(iter => {
         if (iter.businessMetrics && Array.isArray(iter.businessMetrics)) {
@@ -3432,20 +3597,19 @@ async function renderHistoricalAnalyticsView() {
         areaSelect.innerHTML = '<option value="">-- All Areas (Overall) --</option>' + areasArray.map(a => `<option value="${a}">${a}</option>`).join('');
     }
 
-    // Restore saved selection
     const savedArea = localStorage.getItem('selectedBusinessArea');
     if (savedArea && areasArray.includes(savedArea)) {
         areaSelect.value = savedArea;
     }
 
-    // ---- Filtered charts (based on selected area) ----
+    // ---- Filtered charts ----
     const selectedArea = areaSelect.value;
     if (selectedArea) {
         renderFilteredCharts(historicalData, selectedArea);
     } else {
         const msgDiv = document.getElementById('filteredChartsMessage');
         if (msgDiv) msgDiv.innerText = '';
-        ['filteredEvChart','filteredRwChart','filteredCtChart','filteredAvgWorkloadChart','filteredResourceDistChart','filteredBugSeverityChart','filteredBugTypeChart'].forEach(id => {
+        ['filteredEvChart','filteredRwChart','filteredCtChart','filteredAvgWorkloadChart','filteredResourceDistChart','filteredBugSeverityChart','filteredBugTypeChart','filteredCompletedStoriesChart'].forEach(id => {
             if (window[id+'Chart']) {
                 window[id+'Chart'].destroy();
                 delete window[id+'Chart'];
@@ -3479,6 +3643,26 @@ async function renderHistoricalAnalyticsView() {
         container.appendChild(existingTable);
     }
     existingTable.innerHTML = tableHtml;
+
+    // ========== TREND FORECAST CHART (Above Monte Carlo) ==========
+    // Ensure canvas exists for trend forecast
+    let trendCanvas = document.getElementById('trendForecastChart');
+    if (!trendCanvas) {
+        trendCanvas = document.createElement('canvas');
+        trendCanvas.id = 'trendForecastChart';
+        trendCanvas.style.maxHeight = '300px';
+        trendCanvas.style.width = '100%';
+        // Insert before the forecast container (or after summary table)
+        const forecastContainer = document.getElementById('forecastContainer');
+        if (forecastContainer) {
+            forecastContainer.parentNode.insertBefore(trendCanvas, forecastContainer);
+        } else {
+            container.appendChild(trendCanvas);
+        }
+    }
+    // Render trend forecast chart using historical completed stories
+    const completedStoriesData = historicalData.map(d => d.completedStories || 0);
+    renderTrendForecastChart('trendForecastChart', labels, completedStoriesData, 3);
 
     // ---- Forecast (Overall) ----
     const overallForecastHtml = renderForecastWidgets(historicalData, null, "Overall");
@@ -3523,7 +3707,6 @@ async function renderHistoricalAnalyticsView() {
         container.appendChild(heatmapContainer);
     }
 
-    // Build heatmap data based on selected area (or overall)
     let heatmapData = [];
     const areaForHeatmap = document.getElementById('businessAreaSelect')?.value || '';
     if (areaForHeatmap) {
@@ -3633,6 +3816,7 @@ async function renderHistoricalAnalyticsView() {
     }
     heatmapContainer.innerHTML = heatmapHtml;
 }
+
 // ==================== UPDATED onBusinessAreaChange ====================
 window.onBusinessAreaChange = function() {
     const select = document.getElementById('businessAreaSelect');
