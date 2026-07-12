@@ -1,5 +1,11 @@
+تم تعديل الكود بحيث يُعرض **شارت Completed Stories** ضمن باقي شارتات التحكم (Effort Variance, Rework Ratio, Cycle Time) دون معاملة خاصة، مع إضافة **المتوسط المتحرك SMA-3** والتوقع لثلاث نقاط مقبلة، تماماً كما هو الحال في الشارتات الأخرى.  
+تم حذف التنسيق الخاص (بطاقة منفصلة في الأعلى) ودمج الشارت في التسلسل العادي للشارتات في كل من العرض الرئيسي والعرض المُفلتر حسب Business Area.
+
+---
+
+```javascript
 // [file name]: script.js
-// [file content begin]
+// [file content start]
 // 1. Global Variables (Top Level Scope)2
 let rawData = [];
 let processedStories = [];
@@ -2658,52 +2664,8 @@ function renderFilteredCharts(historicalData, selectedArea) {
     }
     document.getElementById('filteredChartsMessage').innerText = `Showing detailed trends for: ${selectedArea}`;
 
-    // ---- Completed Stories card (placed first) ----
-    let csCard = document.getElementById('filteredCompletedStoriesCard');
-    if (!csCard) {
-        csCard = document.createElement('div');
-        csCard.className = 'card';
-        csCard.style.marginBottom = '30px';
-        csCard.style.padding = '20px';
-        csCard.id = 'filteredCompletedStoriesCard';
-        const title = document.createElement('h4');
-        title.className = 'chart-title';
-        title.style.margin = '0 0 10px 0';
-        title.style.color = '#2c3e50';
-        title.textContent = `📊 Completed Stories (${selectedArea})`;
-        csCard.appendChild(title);
-        const canvas = document.createElement('canvas');
-        canvas.id = 'filteredCompletedStoriesChart';
-        canvas.style.maxHeight = '300px';
-        canvas.style.width = '100%';
-        csCard.appendChild(canvas);
-        const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
-        container.prepend(csCard); // moved to top
-    } else {
-        let title = csCard.querySelector('.chart-title');
-        if (!title) {
-            title = document.createElement('h4');
-            title.className = 'chart-title';
-            title.style.margin = '0 0 10px 0';
-            title.style.color = '#2c3e50';
-            csCard.insertBefore(title, csCard.querySelector('canvas'));
-        }
-        title.textContent = `📊 Completed Stories (${selectedArea})`;
-        // Ensure it's at the top
-        const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
-        if (container && container.firstChild !== csCard) {
-            container.prepend(csCard);
-        }
-    }
-    const completedData = metricsByIteration.map(m => m.completedStories || 0);
-    const totalData = metricsByIteration.map(m => m.totalStories || 0);
-    renderMultiLineChart('filteredCompletedStoriesChart', labels, [
-        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
-        { label: 'Total Stories', data: totalData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
-    ], 'Stories Count');
-
-    // ---- Control charts (EV, RW, CT) ----
-    const filteredChartIds = ['filteredEvChart', 'filteredRwChart', 'filteredCtChart'];
+    // ---- Control charts: EV, RW, CT, CS (Completed Stories) ----
+    const filteredChartIds = ['filteredEvChart', 'filteredRwChart', 'filteredCtChart', 'filteredCsLineChart'];
     filteredChartIds.forEach(id => {
         let canvas = document.getElementById(id);
         if (!canvas) {
@@ -2741,6 +2703,9 @@ function renderFilteredCharts(historicalData, selectedArea) {
     
     const ctData = metricsByIteration.map(m => m.avgCycleTime);
     renderControlChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days', `📊 Cycle Time (${selectedArea})`);
+
+    const csData = metricsByIteration.map(m => m.completedStories || 0);
+    renderControlChart('filteredCsLineChart', labels, csData, 'Completed Stories', '#27ae60', 'Stories', `📊 Completed Stories (${selectedArea})`);
 
     // ---- Remaining filtered charts (Workload, Resource, Bugs) ----
     const workloadFilteredIds = ['filteredAvgWorkloadChart', 'filteredResourceDistChart', 'filteredBugSeverityChart', 'filteredBugTypeChart'];
@@ -3373,50 +3338,8 @@ async function renderHistoricalAnalyticsView() {
 
     const labels = historicalData.map(d => d.iterationName);
 
-    // ---- Completed Stories card (placed first) ----
-    let csCard = document.getElementById('completedStoriesCard');
-    if (!csCard) {
-        csCard = document.createElement('div');
-        csCard.className = 'card';
-        csCard.style.marginBottom = '30px';
-        csCard.style.padding = '20px';
-        csCard.id = 'completedStoriesCard';
-        const title = document.createElement('h4');
-        title.className = 'chart-title';
-        title.style.margin = '0 0 10px 0';
-        title.style.color = '#2c3e50';
-        title.textContent = '📊 Completed Stories (Overall)';
-        csCard.appendChild(title);
-        const canvas = document.createElement('canvas');
-        canvas.id = 'completedStoriesOverallChart';
-        canvas.style.maxHeight = '300px';
-        canvas.style.width = '100%';
-        csCard.appendChild(canvas);
-        container.prepend(csCard); // moved to top
-    } else {
-        let title = csCard.querySelector('.chart-title');
-        if (!title) {
-            title = document.createElement('h4');
-            title.className = 'chart-title';
-            title.style.margin = '0 0 10px 0';
-            title.style.color = '#2c3e50';
-            csCard.insertBefore(title, csCard.querySelector('canvas'));
-        }
-        title.textContent = '📊 Completed Stories (Overall)';
-        // Ensure it's at the top
-        if (container.firstChild !== csCard) {
-            container.prepend(csCard);
-        }
-    }
-    const completedData = historicalData.map(d => d.completedStories || 0);
-    const totalStoriesData = historicalData.map(d => d.totalStories || 0);
-    renderMultiLineChart('completedStoriesOverallChart', labels, [
-        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
-        { label: 'Total Stories', data: totalStoriesData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
-    ], 'Stories Count');
-
-    // ---- Control charts (EV, RW, CT) ----
-    const chartIds = ['evLineChart', 'rwLineChart', 'ctLineChart'];
+    // ---- Control charts: EV, RW, CT, CS (Completed Stories) ----
+    const chartIds = ['evLineChart', 'rwLineChart', 'ctLineChart', 'csLineChart'];
     chartIds.forEach(id => {
         let canvas = document.getElementById(id);
         if (!canvas) {
@@ -3430,6 +3353,7 @@ async function renderHistoricalAnalyticsView() {
             canvas.style.maxHeight = '300px';
             canvas.style.width = '100%';
             card.appendChild(canvas);
+            // Insert after the previous card or at the end
             container.appendChild(card);
         } else {
             let parent = canvas.parentNode;
@@ -3447,6 +3371,8 @@ async function renderHistoricalAnalyticsView() {
     renderControlChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %', '📊 Effort Variance (SMA-3 Forecast)');
     renderControlChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %', '📊 Rework Ratio (SMA-3 Forecast)');
     renderControlChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days', '📊 Cycle Time (SMA-3 Forecast)');
+    const csData = historicalData.map(d => d.completedStories || 0);
+    renderControlChart('csLineChart', labels, csData, 'Completed Stories', '#27ae60', 'Stories', '📊 Completed Stories (SMA-3 Forecast)');
 
     // ---- Workload Charts (placed after control charts) ----
     const workloadIds = ['avgWorkloadLineChart', 'resourceDistChart', 'bugSeverityChart', 'bugTypeChart'];
@@ -3568,7 +3494,7 @@ async function renderHistoricalAnalyticsView() {
         const msgDiv = document.getElementById('filteredChartsMessage');
         if (msgDiv) msgDiv.innerText = '';
         // تنظيف الشارتات المفلترة
-        ['filteredEvChart','filteredRwChart','filteredCtChart','filteredAvgWorkloadChart','filteredResourceDistChart','filteredBugSeverityChart','filteredBugTypeChart','filteredCompletedStoriesChart'].forEach(id => {
+        ['filteredEvChart','filteredRwChart','filteredCtChart','filteredCsLineChart','filteredAvgWorkloadChart','filteredResourceDistChart','filteredBugSeverityChart','filteredBugTypeChart'].forEach(id => {
             if (window[id+'Chart']) {
                 window[id+'Chart'].destroy();
                 delete window[id+'Chart'];
@@ -4151,3 +4077,4 @@ window.onload = async () => {
     renderHolidaysList();
 };
 // [file content end]
+```
