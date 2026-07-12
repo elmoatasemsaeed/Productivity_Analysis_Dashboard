@@ -2656,7 +2656,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
     }
     document.getElementById('filteredChartsMessage').innerText = `Showing detailed trends for: ${selectedArea}`;
 
-    // التأكد من وجود canvases داخل بطاقات للمنطقة المفلترة
+    // التأكد من وجود canvases داخل بطاقات
     const filteredChartIds = ['filteredEvChart', 'filteredRwChart', 'filteredCtChart'];
     filteredChartIds.forEach(id => {
         let canvas = document.getElementById(id);
@@ -2671,7 +2671,6 @@ function renderFilteredCharts(historicalData, selectedArea) {
             canvas.style.maxHeight = '300px';
             canvas.style.width = '100%';
             card.appendChild(canvas);
-            // إدراج البطاقة في منطقة التفاصيل المفلترة (نبحث عن عنصر مناسب)
             const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
             container.appendChild(card);
         } else {
@@ -2687,17 +2686,17 @@ function renderFilteredCharts(historicalData, selectedArea) {
         }
     });
 
-    // رسم شارتات التحكم المفلترة
+    // رسم الشارتات مع العناوين
     const evData = metricsByIteration.map(m => m.effortVariance);
-    renderControlChart('filteredEvChart', labels, evData, 'Effort Variance %', '#f39c12', 'Variance %');
+    renderControlChart('filteredEvChart', labels, evData, 'Effort Variance %', '#f39c12', 'Variance %', `📊 Effort Variance (${selectedArea})`);
     
     const rwData = metricsByIteration.map(m => m.reworkRatio);
-    renderControlChart('filteredRwChart', labels, rwData, 'Rework Ratio %', '#e67e22', 'Rework %');
+    renderControlChart('filteredRwChart', labels, rwData, 'Rework Ratio %', '#e67e22', 'Rework %', `📊 Rework Ratio (${selectedArea})`);
     
     const ctData = metricsByIteration.map(m => m.avgCycleTime);
-    renderControlChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days');
+    renderControlChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days', `📊 Cycle Time (${selectedArea})`);
 
-    // ---- NEW: Completed Stories chart for filtered area - SEPARATE CARD ----
+    // ---- Completed Stories chart for filtered area (منفصل) ----
     let csCard = document.getElementById('filteredCompletedStoriesCard');
     if (!csCard) {
         csCard = document.createElement('div');
@@ -2705,18 +2704,23 @@ function renderFilteredCharts(historicalData, selectedArea) {
         csCard.style.marginBottom = '30px';
         csCard.style.padding = '20px';
         csCard.id = 'filteredCompletedStoriesCard';
+        const title = document.createElement('h4');
+        title.className = 'chart-title';
+        title.style.margin = '0 0 10px 0';
+        title.style.color = '#2c3e50';
+        title.textContent = `📊 Completed Stories (${selectedArea})`;
+        csCard.appendChild(title);
         const canvas = document.createElement('canvas');
         canvas.id = 'filteredCompletedStoriesChart';
         canvas.style.maxHeight = '300px';
         canvas.style.width = '100%';
         csCard.appendChild(canvas);
-        // إدراج البطاقة بعد شارت Cycle Time المفلتر
         const ctCard = document.getElementById('filteredCtChartCard') || document.getElementById('filteredCtChart')?.parentNode;
         if (ctCard) {
             ctCard.parentNode.insertBefore(csCard, ctCard.nextSibling);
         } else {
             const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
-                        container.appendChild(csCard);
+            container.appendChild(csCard);
         }
     } else {
         let title = csCard.querySelector('.chart-title');
@@ -3105,8 +3109,6 @@ function calculateControlLimits(data) {
 }
 
 
-// ==================== 1. دالة renderControlChart (مع SMA و عنوان) ====================
-
 function renderControlChart(canvasId, labels, data, label, color, yLabel = '', chartTitle = '') {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -3117,7 +3119,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
         delete window[canvasId + 'Chart'];
     }
 
-    // التأكد من وجود البطاقة وإضافة العنوان إن لم يكن موجوداً
+    // التأكد من وجود البطاقة وإضافة العنوان
     let card = canvas.closest('.card');
     if (!card) {
         card = document.createElement('div');
@@ -3127,7 +3129,6 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
         canvas.parentNode.replaceChild(card, canvas);
         card.appendChild(canvas);
     }
-    // إضافة أو تحديث العنوان
     let titleEl = card.querySelector('.chart-title');
     if (!titleEl) {
         titleEl = document.createElement('h4');
@@ -3147,7 +3148,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
     const twoSigmaUp = mean + 2 * sigma;
     const twoSigmaDown = mean - 2 * sigma;
 
-    // ---- حساب المتوسط المتحرك البسيط (SMA) مع نافذة 3 ----
+    // ---- حساب المتوسط المتحرك البسيط (SMA) بنافذة 3 ----
     const windowSize = 3;
     const smaHistorical = [];
     for (let i = 0; i < data.length; i++) {
@@ -3172,7 +3173,9 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
     const extended2Up = extendNull(Array(labels.length).fill(twoSigmaUp));
     const extended2Down = extendNull(Array(labels.length).fill(twoSigmaDown));
 
+    // خط SMA التاريخي (يمتد للنقاط التاريخية فقط)
     const smaHistoricalExtended = [...smaHistorical, null, null, null];
+    // التنبؤ: null للتاريخ، ثم قيم التنبؤ
     const forecastExtended = [...Array(labels.length).fill(null), ...futureValues];
 
     // ألوان النقاط حسب الخروج عن الحدود
@@ -3184,6 +3187,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
     });
 
     const datasets = [
+        // البيانات الفعلية
         {
             label: label,
             data: extendedData,
@@ -3197,6 +3201,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             pointHoverRadius: 7,
             spanGaps: false,
         },
+        // UCL (+3σ)
         {
             label: 'UCL (+3σ)',
             data: extendedUcl,
@@ -3207,6 +3212,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 2,
         },
+        // LCL (-3σ)
         {
             label: 'LCL (-3σ)',
             data: extendedLcl,
@@ -3217,6 +3223,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 2,
         },
+        // +2σ
         {
             label: '+2σ Zone',
             data: extended2Up,
@@ -3227,6 +3234,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 1.5,
         },
+        // -2σ
         {
             label: '-2σ Zone',
             data: extended2Down,
@@ -3237,6 +3245,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 1.5,
         },
+        // +1σ
         {
             label: '+1σ Zone',
             data: extended1Up,
@@ -3247,6 +3256,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 1,
         },
+        // -1σ
         {
             label: '-1σ Zone',
             data: extended1Down,
@@ -3257,6 +3267,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 1,
         },
+        // Mean
         {
             label: 'Mean',
             data: extendedMean,
@@ -3267,8 +3278,9 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 1.5,
         },
+        // المتوسط المتحرك (SMA-3) التاريخي
         {
-            label: 'Moving Average (SMA-3)',
+            label: 'SMA-3 (Historical)',
             data: smaHistoricalExtended,
             borderColor: '#8e44ad',
             borderDash: [4, 4],
@@ -3277,8 +3289,9 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
             fill: false,
             borderWidth: 2,
         },
+        // التنبؤ (تمديد SMA-3 للمستقبل)
         {
-            label: 'Forecast (SMA-3)',
+            label: 'SMA-3 Forecast (3 pts)',
             data: forecastExtended,
             borderColor: '#e74c3c',
             borderDash: [6, 3],
@@ -3329,21 +3342,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
         }
     });
 }
-// ==================== LINEAR REGRESSION & TREND FORECAST ====================
 
-function linearRegression(x, y) {
-    const n = x.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-    for (let i = 0; i < n; i++) {
-        sumX += x[i];
-        sumY += y[i];
-        sumXY += x[i] * y[i];
-        sumX2 += x[i] * x[i];
-    }
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-    return { slope, intercept };
-}
 
 function renderTrendForecastChart(canvasId, labels, data, futurePoints = 3) {
     const canvas = document.getElementById(canvasId);
@@ -3507,16 +3506,11 @@ async function renderHistoricalAnalyticsView() {
 
     const labels = historicalData.map(d => d.iterationName);
 
-    // ---- Control Charts (with embedded Trend + Forecast) ----
-    // نضعهم في بطاقات (cards) منفصلة، ولكننا نحتفظ بالـ canvas الموجود مسبقاً
-    // سنقوم بإنشاء بطاقات جديدة إذا لم تكن موجودة، مع الحفاظ على الـ canvases.
-
-    // التأكد من وجود canvases داخل cards
+    // ---- التأكد من وجود canvases داخل بطاقات ----
     const chartIds = ['evLineChart', 'rwLineChart', 'ctLineChart'];
     chartIds.forEach(id => {
         let canvas = document.getElementById(id);
         if (!canvas) {
-            // إنشاء canvas جديد داخل card
             const card = document.createElement('div');
             card.className = 'card';
             card.style.marginBottom = '30px';
@@ -3527,10 +3521,8 @@ async function renderHistoricalAnalyticsView() {
             canvas.style.maxHeight = '300px';
             canvas.style.width = '100%';
             card.appendChild(canvas);
-            // إدراج البطاقة في container قبل أي عنصر آخر (أو بعد العنصر السابق)
             container.appendChild(card);
         } else {
-            // إذا كان الـ canvas موجوداً بالفعل، تأكد من أنه داخل card
             let parent = canvas.parentNode;
             if (!parent.classList.contains('card')) {
                 const card = document.createElement('div');
@@ -3543,12 +3535,12 @@ async function renderHistoricalAnalyticsView() {
         }
     });
 
-    // رسم الشارتات
-    renderControlChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %');
-    renderControlChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %');
-    renderControlChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days');
+    // ---- رسم الشارتات مع العناوين ----
+    renderControlChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %', '📊 Effort Variance (SMA-3 Forecast)');
+    renderControlChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %', '📊 Rework Ratio (SMA-3 Forecast)');
+    renderControlChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days', '📊 Cycle Time (SMA-3 Forecast)');
 
-    // ---- NEW: Completed Stories Chart (Overall) - SEPARATE CARD ----
+    // ---- Completed Stories Chart (منفصل) ----
     let csCard = document.getElementById('completedStoriesCard');
     if (!csCard) {
         csCard = document.createElement('div');
@@ -3556,12 +3548,17 @@ async function renderHistoricalAnalyticsView() {
         csCard.style.marginBottom = '30px';
         csCard.style.padding = '20px';
         csCard.id = 'completedStoriesCard';
+        const title = document.createElement('h4');
+        title.className = 'chart-title';
+        title.style.margin = '0 0 10px 0';
+        title.style.color = '#2c3e50';
+        title.textContent = '📊 Completed Stories (Overall)';
+        csCard.appendChild(title);
         const canvas = document.createElement('canvas');
         canvas.id = 'completedStoriesOverallChart';
         canvas.style.maxHeight = '300px';
         canvas.style.width = '100%';
         csCard.appendChild(canvas);
-        // إدراج البطاقة بعد شارت Cycle Time
         const ctCard = document.getElementById('ctLineChartCard') || document.getElementById('ctLineChart')?.parentNode;
         if (ctCard) {
             ctCard.parentNode.insertBefore(csCard, ctCard.nextSibling);
@@ -3569,7 +3566,6 @@ async function renderHistoricalAnalyticsView() {
             container.appendChild(csCard);
         }
     } else {
-        // تحديث العنوان إن وجد
         let title = csCard.querySelector('.chart-title');
         if (!title) {
             title = document.createElement('h4');
