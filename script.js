@@ -1,9 +1,3 @@
-تم تعديل الكود بحيث يُعرض **شارت Completed Stories** ضمن باقي شارتات التحكم (Effort Variance, Rework Ratio, Cycle Time) دون معاملة خاصة، مع إضافة **المتوسط المتحرك SMA-3** والتوقع لثلاث نقاط مقبلة، تماماً كما هو الحال في الشارتات الأخرى.  
-تم حذف التنسيق الخاص (بطاقة منفصلة في الأعلى) ودمج الشارت في التسلسل العادي للشارتات في كل من العرض الرئيسي والعرض المُفلتر حسب Business Area.
-
----
-
-```javascript
 // [file name]: script.js
 // [file content start]
 // 1. Global Variables (Top Level Scope)2
@@ -4077,4 +4071,3 @@ window.onload = async () => {
     renderHolidaysList();
 };
 // [file content end]
-```
