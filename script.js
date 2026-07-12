@@ -1,3 +1,5 @@
+// [file name]: script.js
+// [file content begin]
 // 1. Global Variables (Top Level Scope)2
 let rawData = [];
 let processedStories = [];
@@ -2656,7 +2658,51 @@ function renderFilteredCharts(historicalData, selectedArea) {
     }
     document.getElementById('filteredChartsMessage').innerText = `Showing detailed trends for: ${selectedArea}`;
 
-    // التأكد من وجود canvases داخل بطاقات
+    // ---- Completed Stories card (placed first) ----
+    let csCard = document.getElementById('filteredCompletedStoriesCard');
+    if (!csCard) {
+        csCard = document.createElement('div');
+        csCard.className = 'card';
+        csCard.style.marginBottom = '30px';
+        csCard.style.padding = '20px';
+        csCard.id = 'filteredCompletedStoriesCard';
+        const title = document.createElement('h4');
+        title.className = 'chart-title';
+        title.style.margin = '0 0 10px 0';
+        title.style.color = '#2c3e50';
+        title.textContent = `📊 Completed Stories (${selectedArea})`;
+        csCard.appendChild(title);
+        const canvas = document.createElement('canvas');
+        canvas.id = 'filteredCompletedStoriesChart';
+        canvas.style.maxHeight = '300px';
+        canvas.style.width = '100%';
+        csCard.appendChild(canvas);
+        const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
+        container.prepend(csCard); // moved to top
+    } else {
+        let title = csCard.querySelector('.chart-title');
+        if (!title) {
+            title = document.createElement('h4');
+            title.className = 'chart-title';
+            title.style.margin = '0 0 10px 0';
+            title.style.color = '#2c3e50';
+            csCard.insertBefore(title, csCard.querySelector('canvas'));
+        }
+        title.textContent = `📊 Completed Stories (${selectedArea})`;
+        // Ensure it's at the top
+        const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
+        if (container && container.firstChild !== csCard) {
+            container.prepend(csCard);
+        }
+    }
+    const completedData = metricsByIteration.map(m => m.completedStories || 0);
+    const totalData = metricsByIteration.map(m => m.totalStories || 0);
+    renderMultiLineChart('filteredCompletedStoriesChart', labels, [
+        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
+        { label: 'Total Stories', data: totalData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
+    ], 'Stories Count');
+
+    // ---- Control charts (EV, RW, CT) ----
     const filteredChartIds = ['filteredEvChart', 'filteredRwChart', 'filteredCtChart'];
     filteredChartIds.forEach(id => {
         let canvas = document.getElementById(id);
@@ -2686,7 +2732,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
         }
     });
 
-    // رسم الشارتات مع العناوين
+    // Draw charts with titles
     const evData = metricsByIteration.map(m => m.effortVariance);
     renderControlChart('filteredEvChart', labels, evData, 'Effort Variance %', '#f39c12', 'Variance %', `📊 Effort Variance (${selectedArea})`);
     
@@ -2696,51 +2742,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
     const ctData = metricsByIteration.map(m => m.avgCycleTime);
     renderControlChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days', `📊 Cycle Time (${selectedArea})`);
 
-    // ---- Completed Stories chart for filtered area (منفصل) ----
-    let csCard = document.getElementById('filteredCompletedStoriesCard');
-    if (!csCard) {
-        csCard = document.createElement('div');
-        csCard.className = 'card';
-        csCard.style.marginBottom = '30px';
-        csCard.style.padding = '20px';
-        csCard.id = 'filteredCompletedStoriesCard';
-        const title = document.createElement('h4');
-        title.className = 'chart-title';
-        title.style.margin = '0 0 10px 0';
-        title.style.color = '#2c3e50';
-        title.textContent = `📊 Completed Stories (${selectedArea})`;
-        csCard.appendChild(title);
-        const canvas = document.createElement('canvas');
-        canvas.id = 'filteredCompletedStoriesChart';
-        canvas.style.maxHeight = '300px';
-        canvas.style.width = '100%';
-        csCard.appendChild(canvas);
-        const ctCard = document.getElementById('filteredCtChartCard') || document.getElementById('filteredCtChart')?.parentNode;
-        if (ctCard) {
-            ctCard.parentNode.insertBefore(csCard, ctCard.nextSibling);
-        } else {
-            const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
-            container.appendChild(csCard);
-        }
-    } else {
-        let title = csCard.querySelector('.chart-title');
-        if (!title) {
-            title = document.createElement('h4');
-            title.className = 'chart-title';
-            title.style.margin = '0 0 10px 0';
-            title.style.color = '#2c3e50';
-            csCard.insertBefore(title, csCard.querySelector('canvas'));
-        }
-        title.textContent = `📊 Completed Stories (${selectedArea})`;
-    }
-    const completedData = metricsByIteration.map(m => m.completedStories || 0);
-    const totalData = metricsByIteration.map(m => m.totalStories || 0);
-    renderMultiLineChart('filteredCompletedStoriesChart', labels, [
-        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
-        { label: 'Total Stories', data: totalData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
-    ], 'Stories Count');
-
-    // ---- باقي الشارتات المفلترة (Workload, Resource, Bugs) ----
+    // ---- Remaining filtered charts (Workload, Resource, Bugs) ----
     const workloadFilteredIds = ['filteredAvgWorkloadChart', 'filteredResourceDistChart', 'filteredBugSeverityChart', 'filteredBugTypeChart'];
     workloadFilteredIds.forEach(id => {
         let canvas = document.getElementById(id);
@@ -2820,6 +2822,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
         { label: 'Specific Bugs', data: specificBugs, backgroundColor: '#3498db' }
     ], 'Bug Type');
 }
+
 async function syncAllIterationsData() {
     if (!azureConfigs || azureConfigs.length === 0) {
         alert("No Azure iterations configured. Please add queries in Azure Config first.");
@@ -3343,143 +3346,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '', c
     });
 }
 
-
-function renderTrendForecastChart(canvasId, labels, data, futurePoints = 3) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    if (window[canvasId + 'Chart']) {
-        window[canvasId + 'Chart'].destroy();
-        delete window[canvasId + 'Chart'];
-    }
-
-    // Prepare numeric indices for regression
-    const indices = data.map((_, i) => i);
-    const { slope, intercept } = linearRegression(indices, data);
-
-    // Generate trend line (fitted values)
-    const trendData = indices.map(i => slope * i + intercept);
-
-    // Generate forecast for future points
-    const lastIndex = indices.length - 1;
-    const forecastIndices = [];
-    const forecastValues = [];
-    for (let i = 1; i <= futurePoints; i++) {
-        const idx = lastIndex + i;
-        forecastIndices.push(idx);
-        forecastValues.push(slope * idx + intercept);
-    }
-
-    // Extend labels for forecast (e.g., "Iteration 5 (Forecast)")
-    const forecastLabels = labels.concat(
-        forecastIndices.map((_, i) => `Forecast ${i+1}`)
-    );
-
-    // Combine data: historical + forecast (for plotting)
-    const fullData = data.concat(forecastValues);
-    const fullLabels = labels.concat(forecastLabels);
-
-    // For trend line, we need values for all points (including forecast)
-    const fullTrend = trendData.concat(forecastValues);
-
-    // Create datasets
-    const datasets = [
-        {
-            label: 'Completed Stories (Historical)',
-            data: data,
-            borderColor: '#2c3e50',
-            backgroundColor: 'transparent',
-            pointBackgroundColor: '#2c3e50',
-            pointBorderColor: '#2c3e50',
-            pointRadius: 5,
-            tension: 0.1,
-            fill: false,
-        },
-        {
-            label: 'Trend Line (Historical)',
-            data: trendData,
-            borderColor: '#e67e22',
-            borderDash: [4, 4],
-            backgroundColor: 'transparent',
-            pointRadius: 0,
-            fill: false,
-            borderWidth: 2,
-        },
-        {
-            label: 'Forecast Extension',
-            data: fullTrend, // full data with forecast included
-            borderColor: '#e74c3c',
-            borderDash: [6, 3],
-            backgroundColor: 'transparent',
-            pointRadius: 0,
-            fill: false,
-            borderWidth: 2,
-            // We'll use segment to show only forecast part as dashed?
-            // Simpler: just plot full trend but differentiate via label
-        }
-    ];
-
-    // To make the forecast line appear only from the end, we can use a trick:
-    // We'll create a separate dataset for forecast only (with nulls for earlier points)
-    const forecastOnlyData = Array(labels.length).fill(null).concat(forecastValues);
-    datasets.push({
-        label: 'Forecast (future)',
-        data: forecastOnlyData,
-        borderColor: '#e74c3c',
-        borderDash: [6, 3],
-        backgroundColor: 'transparent',
-        pointRadius: 0,
-        fill: false,
-        borderWidth: 2,
-    });
-
-    // Also add actual forecast points as circles
-    const forecastPoints = Array(labels.length).fill(null).concat(forecastValues);
-    datasets.push({
-        label: 'Forecast Points',
-        data: forecastPoints,
-        borderColor: '#e74c3c',
-        backgroundColor: '#e74c3c',
-        pointRadius: 6,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        showLine: false,
-    });
-
-    window[canvasId + 'Chart'] = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: fullLabels,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.dataset.label || '';
-                            const value = context.raw;
-                            if (value === null) return null;
-                            return `${label}: ${value.toFixed(1)}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    title: { display: true, text: 'Number of Stories' },
-                    beginAtZero: true,
-                },
-                x: {
-                    title: { display: true, text: 'Iteration' }
-                }
-            }
-        }
-    });
-}
+// ==================== REMOVED renderTrendForecastChart (unused linear regression forecast) ====================
 
 async function renderHistoricalAnalyticsView() {
     const container = document.getElementById('historical-analytics-view');
@@ -3506,7 +3373,49 @@ async function renderHistoricalAnalyticsView() {
 
     const labels = historicalData.map(d => d.iterationName);
 
-    // ---- التأكد من وجود canvases داخل بطاقات ----
+    // ---- Completed Stories card (placed first) ----
+    let csCard = document.getElementById('completedStoriesCard');
+    if (!csCard) {
+        csCard = document.createElement('div');
+        csCard.className = 'card';
+        csCard.style.marginBottom = '30px';
+        csCard.style.padding = '20px';
+        csCard.id = 'completedStoriesCard';
+        const title = document.createElement('h4');
+        title.className = 'chart-title';
+        title.style.margin = '0 0 10px 0';
+        title.style.color = '#2c3e50';
+        title.textContent = '📊 Completed Stories (Overall)';
+        csCard.appendChild(title);
+        const canvas = document.createElement('canvas');
+        canvas.id = 'completedStoriesOverallChart';
+        canvas.style.maxHeight = '300px';
+        canvas.style.width = '100%';
+        csCard.appendChild(canvas);
+        container.prepend(csCard); // moved to top
+    } else {
+        let title = csCard.querySelector('.chart-title');
+        if (!title) {
+            title = document.createElement('h4');
+            title.className = 'chart-title';
+            title.style.margin = '0 0 10px 0';
+            title.style.color = '#2c3e50';
+            csCard.insertBefore(title, csCard.querySelector('canvas'));
+        }
+        title.textContent = '📊 Completed Stories (Overall)';
+        // Ensure it's at the top
+        if (container.firstChild !== csCard) {
+            container.prepend(csCard);
+        }
+    }
+    const completedData = historicalData.map(d => d.completedStories || 0);
+    const totalStoriesData = historicalData.map(d => d.totalStories || 0);
+    renderMultiLineChart('completedStoriesOverallChart', labels, [
+        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
+        { label: 'Total Stories', data: totalStoriesData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
+    ], 'Stories Count');
+
+    // ---- Control charts (EV, RW, CT) ----
     const chartIds = ['evLineChart', 'rwLineChart', 'ctLineChart'];
     chartIds.forEach(id => {
         let canvas = document.getElementById(id);
@@ -3535,55 +3444,11 @@ async function renderHistoricalAnalyticsView() {
         }
     });
 
-    // ---- رسم الشارتات مع العناوين ----
     renderControlChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %', '📊 Effort Variance (SMA-3 Forecast)');
     renderControlChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %', '📊 Rework Ratio (SMA-3 Forecast)');
     renderControlChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days', '📊 Cycle Time (SMA-3 Forecast)');
 
-    // ---- Completed Stories Chart (منفصل) ----
-    let csCard = document.getElementById('completedStoriesCard');
-    if (!csCard) {
-        csCard = document.createElement('div');
-        csCard.className = 'card';
-        csCard.style.marginBottom = '30px';
-        csCard.style.padding = '20px';
-        csCard.id = 'completedStoriesCard';
-        const title = document.createElement('h4');
-        title.className = 'chart-title';
-        title.style.margin = '0 0 10px 0';
-        title.style.color = '#2c3e50';
-        title.textContent = '📊 Completed Stories (Overall)';
-        csCard.appendChild(title);
-        const canvas = document.createElement('canvas');
-        canvas.id = 'completedStoriesOverallChart';
-        canvas.style.maxHeight = '300px';
-        canvas.style.width = '100%';
-        csCard.appendChild(canvas);
-        const ctCard = document.getElementById('ctLineChartCard') || document.getElementById('ctLineChart')?.parentNode;
-        if (ctCard) {
-            ctCard.parentNode.insertBefore(csCard, ctCard.nextSibling);
-        } else {
-            container.appendChild(csCard);
-        }
-    } else {
-        let title = csCard.querySelector('.chart-title');
-        if (!title) {
-            title = document.createElement('h4');
-            title.className = 'chart-title';
-            title.style.margin = '0 0 10px 0';
-            title.style.color = '#2c3e50';
-            csCard.insertBefore(title, csCard.querySelector('canvas'));
-        }
-        title.textContent = '📊 Completed Stories (Overall)';
-    }
-    const completedData = historicalData.map(d => d.completedStories || 0);
-    const totalStoriesData = historicalData.map(d => d.totalStories || 0);
-    renderMultiLineChart('completedStoriesOverallChart', labels, [
-        { label: 'Completed Stories', data: completedData, borderColor: '#27ae60', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#27ae60' },
-        { label: 'Total Stories', data: totalStoriesData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
-    ], 'Stories Count');
-
-    // ---- Workload Charts (already in cards, but we ensure they are) ----
+    // ---- Workload Charts (placed after control charts) ----
     const workloadIds = ['avgWorkloadLineChart', 'resourceDistChart', 'bugSeverityChart', 'bugTypeChart'];
     workloadIds.forEach(id => {
         let canvas = document.getElementById(id);
@@ -3612,7 +3477,6 @@ async function renderHistoricalAnalyticsView() {
         }
     });
 
-    // ---- رسم باقي الشارتات (Workload, Resource, Bugs) ----
     const devWorkloadSolid = historicalData.map(d => d.avgDevHours || 0);
     const devWorkloadIncl = historicalData.map(d => d.avgDevHoursInclMeetings || 0);
     const testWorkloadSolid = historicalData.map(d => d.avgTestHours || 0);
@@ -4286,3 +4150,4 @@ window.onload = async () => {
     if (typeof renderAzureConfigsTable === 'function') renderAzureConfigsTable();
     renderHolidaysList();
 };
+// [file content end]
