@@ -2656,26 +2656,7 @@ function renderFilteredCharts(historicalData, selectedArea) {
     }
     document.getElementById('filteredChartsMessage').innerText = `Showing detailed trends for: ${selectedArea}`;
 
-    // Create alert divs for filtered control charts if not exist
-    ['filteredEvChart', 'filteredRwChart', 'filteredCtChart'].forEach(id => {
-        let div = document.getElementById(id + 'Alerts');
-        if (!div) {
-            const canvas = document.getElementById(id);
-            if (canvas) {
-                div = document.createElement('div');
-                div.id = id + 'Alerts';
-                div.style.margin = '5px 0 10px 0';
-                div.style.padding = '8px 12px';
-                div.style.borderRadius = '4px';
-                div.style.backgroundColor = '#f8f9fa';
-                div.style.fontSize = '0.9em';
-                div.style.border = '1px solid #ddd';
-                canvas.parentNode.insertBefore(div, canvas.nextSibling);
-            }
-        }
-    });
-
-    // Control charts for filtered area
+    // Control charts for filtered area (with embedded Trend + Forecast)
     const evData = metricsByIteration.map(m => m.effortVariance);
     renderControlChart('filteredEvChart', labels, evData, 'Effort Variance %', '#f39c12', 'Variance %');
     
@@ -2685,19 +2666,17 @@ function renderFilteredCharts(historicalData, selectedArea) {
     const ctData = metricsByIteration.map(m => m.avgCycleTime);
     renderControlChart('filteredCtChart', labels, ctData, 'Cycle Time (days)', '#3498db', 'Days');
 
-    // ---- NEW: Completed Stories chart for filtered area ----
+    // ---- NEW: Completed Stories chart for filtered area - SEPARATE ----
     let csCanvas = document.getElementById('filteredCompletedStoriesChart');
     if (!csCanvas) {
         csCanvas = document.createElement('canvas');
         csCanvas.id = 'filteredCompletedStoriesChart';
         csCanvas.style.maxHeight = '300px';
         csCanvas.style.width = '100%';
-        // Insert after the last filtered chart (e.g., after filteredCtChart)
-        const lastChart = document.getElementById('filteredCtChart');
+        csCanvas.style.marginTop = '20px';
+        const lastChart = document.getElementById('filteredCtChart')?.parentNode || document.getElementById('detailedChartsSection');
         if (lastChart) {
             lastChart.parentNode.insertBefore(csCanvas, lastChart.nextSibling);
-        } else {
-            document.getElementById('detailedChartsSection')?.appendChild(csCanvas);
         }
     }
     const completedData = metricsByIteration.map(m => m.completedStories || 0);
@@ -3056,6 +3035,8 @@ function calculateControlLimits(data) {
     // ✅ إرجاع sigma أيضاً لاستخدامها في رسم الخطوط الإضافية
     return { mean, ucl, lcl, sigma };
 }
+
+
 function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -3073,6 +3054,30 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
     const twoSigmaUp = mean + 2 * sigma;
     const twoSigmaDown = mean - 2 * sigma;
 
+    // ---- Trend & Forecast (Linear Regression) ----
+    const indices = data.map((_, i) => i);
+    const { slope, intercept } = linearRegression(indices, data);
+    const trendHistorical = indices.map(i => slope * i + intercept);
+    const lastIndex = indices.length - 1;
+    const futureIndices = [1, 2, 3].map(i => lastIndex + i);
+    const forecastValues = futureIndices.map(i => slope * i + intercept);
+    const extendedLabels = [...labels, 'F-1', 'F-2', 'F-3'];
+    
+    // Helper to extend arrays with null for future points
+    const extendNull = (arr) => [...arr, null, null, null];
+    
+    const extendedData = extendNull(data);
+    const extendedUcl = extendNull(Array(labels.length).fill(ucl));
+    const extendedLcl = extendNull(Array(labels.length).fill(lcl));
+    const extendedMean = extendNull(Array(labels.length).fill(mean));
+    const extended1Up = extendNull(Array(labels.length).fill(oneSigmaUp));
+    const extended1Down = extendNull(Array(labels.length).fill(oneSigmaDown));
+    const extended2Up = extendNull(Array(labels.length).fill(twoSigmaUp));
+    const extended2Down = extendNull(Array(labels.length).fill(twoSigmaDown));
+    
+    const trendHistoricalExtended = [...trendHistorical, null, null, null];
+    const forecastExtended = [...Array(labels.length).fill(null), ...forecastValues];
+
     const pointColors = data.map(val => {
         if (val > ucl || val < lcl) return '#e74c3c';
         if (val > twoSigmaUp || val < twoSigmaDown) return '#f39c12';
@@ -3080,109 +3085,25 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         return color;
     });
 
-    const outOfControl = [];
-    const alerts = [];
-
-    data.forEach((val, i) => {
-        if (val > ucl || val < lcl) {
-            outOfControl.push({ label: labels[i], value: val, limit: val > ucl ? 'UCL (3σ)' : 'LCL (3σ)' });
-        }
-    });
-
-    for (let i = 2; i < data.length; i++) {
-        const window = [data[i-2], data[i-1], data[i]];
-        const above2σ = window.filter(v => v > twoSigmaUp);
-        const below2σ = window.filter(v => v < twoSigmaDown);
-        if (above2σ.length >= 2) {
-            alerts.push(`⚠️ Rule 2: 2 of 3 points above +2σ (${labels[i-2]} to ${labels[i]})`);
-        }
-        if (below2σ.length >= 2) {
-            alerts.push(`⚠️ Rule 2: 2 of 3 points below -2σ (${labels[i-2]} to ${labels[i]})`);
-        }
-    }
-
-    for (let i = 4; i < data.length; i++) {
-        const window = [data[i-4], data[i-3], data[i-2], data[i-1], data[i]];
-        const above1σ = window.filter(v => v > oneSigmaUp);
-        const below1σ = window.filter(v => v < oneSigmaDown);
-        if (above1σ.length >= 4) {
-            alerts.push(`⚠️ Rule 3: 4 of 5 points above +1σ (${labels[i-4]} to ${labels[i]})`);
-        }
-        if (below1σ.length >= 4) {
-            alerts.push(`⚠️ Rule 3: 4 of 5 points below -1σ (${labels[i-4]} to ${labels[i]})`);
-        }
-    }
-
-    let runCount = 0;
-    let runDirection = 0;
-    for (let i = 0; i < data.length; i++) {
-        if (data[i] > mean) {
-            if (runDirection === 1) runCount++;
-            else { runDirection = 1; runCount = 1; }
-        } else if (data[i] < mean) {
-            if (runDirection === -1) runCount++;
-            else { runDirection = -1; runCount = 1; }
-        } else {
-            runCount = 0;
-        }
-        if (runCount >= 7) {
-            const startIdx = i - runCount + 1;
-            const side = runDirection === 1 ? 'above' : 'below';
-            alerts.push(`⚠️ Rule 4: 7 consecutive points ${side} the Mean (${labels[startIdx]} to ${labels[i]})`);
-            runCount = 0;
-        }
-    }
-
-    let alertDiv = document.getElementById(canvasId + 'Alerts');
-    if (!alertDiv) {
-        alertDiv = document.createElement('div');
-        alertDiv.id = canvasId + 'Alerts';
-        alertDiv.style.margin = '5px 0 10px 0';
-        alertDiv.style.padding = '8px 12px';
-        alertDiv.style.borderRadius = '4px';
-        alertDiv.style.fontSize = '0.9em';
-        alertDiv.style.border = '1px solid #ddd';
-        canvas.parentNode.insertBefore(alertDiv, canvas.nextSibling);
-    }
-
-    let allAlerts = [];
-    if (outOfControl.length > 0) {
-        outOfControl.forEach(p => {
-            allAlerts.push(`🔴 ${p.label}: ${p.value.toFixed(1)} exceeds ${p.limit}`);
-        });
-    }
-    if (alerts.length > 0) {
-        const uniqueAlerts = [...new Set(alerts)];
-        allAlerts = allAlerts.concat(uniqueAlerts);
-    }
-
-    if (allAlerts.length > 0) {
-        alertDiv.innerHTML = `<span style="font-weight:bold;">⚠️ Alerts:</span> ` + 
-            allAlerts.map(a => `<span style="background:#fde0e0; padding:2px 8px; margin:2px; border-radius:4px; display:inline-block; border:1px solid #e74c3c;">${a}</span>`).join(' ');
-        alertDiv.style.display = 'block';
-        alertDiv.style.backgroundColor = '#fff5f5';
-        alertDiv.style.borderColor = '#e74c3c';
-    } else {
-        // ✅ تم إزالة الرسالة النصية وإخفاء العنصر بالكامل
-        alertDiv.style.display = 'none';
-    }
-
     const datasets = [
+        // 1. Actual Data Points
         {
             label: label,
-            data: data,
+            data: extendedData,
             borderColor: color,
             backgroundColor: color + '33',
             tension: 0.3,
             fill: false,
-            pointBackgroundColor: pointColors,
-            pointBorderColor: pointColors,
+            pointBackgroundColor: [...pointColors, null, null, null],
+            pointBorderColor: [...pointColors, null, null, null],
             pointRadius: 5,
             pointHoverRadius: 7,
+            spanGaps: false,
         },
+        // 2. UCL (+3σ)
         {
             label: 'UCL (+3σ)',
-            data: Array(labels.length).fill(ucl),
+            data: extendedUcl,
             borderColor: '#e74c3c',
             borderDash: [8, 4],
             backgroundColor: 'transparent',
@@ -3190,9 +3111,10 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 2,
         },
+        // 3. LCL (-3σ)
         {
             label: 'LCL (-3σ)',
-            data: Array(labels.length).fill(lcl),
+            data: extendedLcl,
             borderColor: '#e74c3c',
             borderDash: [8, 4],
             backgroundColor: 'transparent',
@@ -3200,9 +3122,10 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 2,
         },
+        // 4. +2σ Zone
         {
             label: '+2σ Zone',
-            data: Array(labels.length).fill(twoSigmaUp),
+            data: extended2Up,
             borderColor: '#f39c12',
             borderDash: [4, 4],
             backgroundColor: 'transparent',
@@ -3210,9 +3133,10 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 1.5,
         },
+        // 5. -2σ Zone
         {
             label: '-2σ Zone',
-            data: Array(labels.length).fill(twoSigmaDown),
+            data: extended2Down,
             borderColor: '#f39c12',
             borderDash: [4, 4],
             backgroundColor: 'transparent',
@@ -3220,9 +3144,10 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 1.5,
         },
+        // 6. +1σ Zone
         {
             label: '+1σ Zone',
-            data: Array(labels.length).fill(oneSigmaUp),
+            data: extended1Up,
             borderColor: '#95a5a6',
             borderDash: [2, 3],
             backgroundColor: 'transparent',
@@ -3230,9 +3155,10 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 1,
         },
+        // 7. -1σ Zone
         {
             label: '-1σ Zone',
-            data: Array(labels.length).fill(oneSigmaDown),
+            data: extended1Down,
             borderColor: '#95a5a6',
             borderDash: [2, 3],
             backgroundColor: 'transparent',
@@ -3240,21 +3166,47 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             fill: false,
             borderWidth: 1,
         },
+        // 8. Mean
         {
             label: 'Mean',
-            data: Array(labels.length).fill(mean),
+            data: extendedMean,
             borderColor: '#2c3e50',
             borderDash: [2, 2],
             backgroundColor: 'transparent',
             pointRadius: 0,
             fill: false,
             borderWidth: 1.5,
+        },
+        // 9. Trend Line (Historical)
+        {
+            label: 'Trend Line',
+            data: trendHistoricalExtended,
+            borderColor: '#8e44ad',
+            borderDash: [4, 4],
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            borderWidth: 2,
+        },
+        // 10. Forecast Extension (3 points)
+        {
+            label: 'Forecast (3 pts)',
+            data: forecastExtended,
+            borderColor: '#e74c3c',
+            borderDash: [6, 3],
+            backgroundColor: 'transparent',
+            pointRadius: 4,
+            pointBackgroundColor: '#e74c3c',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
+            fill: false,
+            borderWidth: 2,
         }
     ];
 
     window[canvasId + 'Chart'] = new Chart(ctx, {
         type: 'line',
-        data: { labels, datasets },
+        data: { labels: extendedLabels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: true,
@@ -3264,14 +3216,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
                         label: function(context) {
                             const label = context.dataset.label || '';
                             const value = context.raw;
-                            if (label.includes('σ') || label === 'Mean') {
-                                return `${label}: ${value.toFixed(1)}`;
-                            }
-                            const idx = context.dataIndex;
-                            const isOut = data[idx] > ucl || data[idx] < lcl;
-                            if (isOut) {
-                                return `${label}: ${value.toFixed(1)} ⚠️ Out of Control`;
-                            }
+                            if (value === null || value === undefined) return null;
                             return `${label}: ${value.toFixed(1)}`;
                         }
                     }
@@ -3296,6 +3241,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         }
     });
 }
+
 // ==================== LINEAR REGRESSION & TREND FORECAST ====================
 
 function linearRegression(x, y) {
@@ -3474,43 +3420,22 @@ async function renderHistoricalAnalyticsView() {
 
     const labels = historicalData.map(d => d.iterationName);
 
-    // Ensure alert divs exist for control charts
-    ['evLineChart', 'rwLineChart', 'ctLineChart'].forEach(id => {
-        let div = document.getElementById(id + 'Alerts');
-        if (!div) {
-            const canvas = document.getElementById(id);
-            if (canvas) {
-                div = document.createElement('div');
-                div.id = id + 'Alerts';
-                div.style.margin = '5px 0 10px 0';
-                div.style.padding = '8px 12px';
-                div.style.borderRadius = '4px';
-                div.style.backgroundColor = '#f8f9fa';
-                div.style.fontSize = '0.9em';
-                div.style.border = '1px solid #ddd';
-                canvas.parentNode.insertBefore(div, canvas.nextSibling);
-            }
-        }
-    });
-
-    // ---- Control Charts ----
+    // ---- Control Charts (with embedded Trend + Forecast) ----
     renderControlChart('evLineChart', labels, historicalData.map(d => d.effortVariance), 'Effort Variance %', '#f39c12', 'Variance %');
     renderControlChart('rwLineChart', labels, historicalData.map(d => d.reworkRatio), 'Rework Ratio %', '#e67e22', 'Rework %');
     renderControlChart('ctLineChart', labels, historicalData.map(d => d.avgCycleTime), 'Cycle Time (days)', '#3498db', 'Days');
 
-    // ---- NEW: Completed Stories Chart (Overall) ----
-    // Ensure canvas exists for Completed Stories
+    // ---- NEW: Completed Stories Chart (Overall) - SEPARATE ----
     let csCanvas = document.getElementById('completedStoriesOverallChart');
     if (!csCanvas) {
         csCanvas = document.createElement('canvas');
         csCanvas.id = 'completedStoriesOverallChart';
         csCanvas.style.maxHeight = '300px';
         csCanvas.style.width = '100%';
-        // Insert after the last control chart (or after the container of charts)
-        const lastChartContainer = document.querySelector('#historical-analytics-view .card') || container;
-        lastChartContainer.parentNode.insertBefore(csCanvas, lastChartContainer.nextSibling);
+        csCanvas.style.marginTop = '20px';
+        const lastChart = document.getElementById('ctLineChart')?.parentNode || container;
+        lastChart.parentNode.insertBefore(csCanvas, lastChart.nextSibling);
     }
-    // Render completed stories chart (overall)
     const completedData = historicalData.map(d => d.completedStories || 0);
     const totalStoriesData = historicalData.map(d => d.totalStories || 0);
     renderMultiLineChart('completedStoriesOverallChart', labels, [
@@ -3518,7 +3443,7 @@ async function renderHistoricalAnalyticsView() {
         { label: 'Total Stories', data: totalStoriesData, borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.3, fill: false, pointBackgroundColor: '#3498db' }
     ], 'Stories Count');
 
-    // ---- Workload Charts (already present) ----
+    // ---- Workload Charts ----
     const devWorkloadSolid = historicalData.map(d => d.avgDevHours || 0);
     const devWorkloadIncl = historicalData.map(d => d.avgDevHoursInclMeetings || 0);
     const testWorkloadSolid = historicalData.map(d => d.avgTestHours || 0);
@@ -3644,27 +3569,7 @@ async function renderHistoricalAnalyticsView() {
     }
     existingTable.innerHTML = tableHtml;
 
-    // ========== TREND FORECAST CHART (Above Monte Carlo) ==========
-    // Ensure canvas exists for trend forecast
-    let trendCanvas = document.getElementById('trendForecastChart');
-    if (!trendCanvas) {
-        trendCanvas = document.createElement('canvas');
-        trendCanvas.id = 'trendForecastChart';
-        trendCanvas.style.maxHeight = '300px';
-        trendCanvas.style.width = '100%';
-        // Insert before the forecast container (or after summary table)
-        const forecastContainer = document.getElementById('forecastContainer');
-        if (forecastContainer) {
-            forecastContainer.parentNode.insertBefore(trendCanvas, forecastContainer);
-        } else {
-            container.appendChild(trendCanvas);
-        }
-    }
-    // Render trend forecast chart using historical completed stories
-    const completedStoriesData = historicalData.map(d => d.completedStories || 0);
-    renderTrendForecastChart('trendForecastChart', labels, completedStoriesData, 3);
-
-    // ---- Forecast (Overall) ----
+    // ---- Forecast (Overall) - Still Monte Carlo ----
     const overallForecastHtml = renderForecastWidgets(historicalData, null, "Overall");
     let forecastContainer = document.getElementById('forecastContainer');
     if (!forecastContainer) {
