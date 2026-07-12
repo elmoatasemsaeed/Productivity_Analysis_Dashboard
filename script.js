@@ -947,13 +947,95 @@ function renderBusinessView() {
     container.innerHTML = html;
 }
 
+// ================================================================
+// 1. HELPER FUNCTIONS (Text Normalization, Stemming, Regex Escape)
+// ================================================================
+
+/**
+ * Escape special characters in a string for use in RegExp
+ */
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Normalize text: lowercase, remove punctuation, unify hyphens/underscores, trim spaces
+ */
+function normalizeText(text) {
+    if (!text) return '';
+    // Convert to lowercase
+    let normalized = text.toLowerCase();
+    // Replace underscores and hyphens with space
+    normalized = normalized.replace(/[_\u2010-\u2015]/g, ' ');
+    // Remove punctuation (keep letters, digits, spaces)
+    normalized = normalized.replace(/[^\w\s]/g, ' ');
+    // Collapse multiple spaces and trim
+    normalized = normalized.replace(/\s+/g, ' ').trim();
+    return normalized;
+}
+
+/**
+ * Simple stemming: remove common suffixes (ing, ed, ion, ation, ization, etc.)
+ * This is a basic rule-based stemmer, not perfect but good for matching.
+ */
+function stemWord(word) {
+    if (!word) return '';
+    // Remove common suffixes
+    const suffixes = [
+        { suffix: 'ization', stem: 'ize' },
+        { suffix: 'isation', stem: 'ise' },
+        { suffix: 'ation', stem: 'ate' },
+        { suffix: 'tion', stem: 't' },
+        { suffix: 'sion', stem: 's' },
+        { suffix: 'ing', stem: '' },
+        { suffix: 'ed', stem: '' },
+        { suffix: 'er', stem: '' },
+        { suffix: 'or', stem: '' },
+        { suffix: 'al', stem: '' },
+        { suffix: 'y', stem: '' },
+        { suffix: 'ies', stem: 'y' },
+        { suffix: 'es', stem: '' },
+        { suffix: 's', stem: '' }
+    ];
+    for (let { suffix, stem } of suffixes) {
+        if (word.endsWith(suffix) && word.length > suffix.length + 2) {
+            return word.slice(0, -suffix.length) + stem;
+        }
+    }
+    return word;
+}
+
+/**
+ * Check if a token is a common generic word (not strong indicator)
+ */
+const GENERIC_WORDS = new Set([
+    'update', 'fix', 'change', 'modify', 'review', 'add', 'remove',
+    'delete', 'create', 'implement', 'improve', 'enhance', 'adjust',
+    'correct', 'resolve', 'address', 'handle', 'process', 'apply',
+    'set', 'get', 'make', 'do', 'work', 'need', 'want'
+]);
+
+// ================================================================
+// 2. DEFINITION OF CATEGORIES WITH KEYWORDS (MERGED OLD + NEW)
+// ================================================================
+
 const REVIEW_CATEGORIES = {
     "Validation": {
         keywords: [
+            // Existing keywords (old)
             { word: "validation", weight: 5 },
             { word: "validate", weight: 4 },
             { word: "validator", weight: 5 },
             { word: "required", weight: 4 },
+            { word: "null", weight: 3 },
+            { word: "empty", weight: 3 },
+            { word: "mandatory", weight: 4 },
+            { word: "check", weight: 2 },
+            { word: "verify", weight: 3 },
+            { word: "condition", weight: 4 },
+            { word: "constraint", weight: 5 },
+            { word: "range", weight: 3 },
+            // New keywords
             { word: "nullable", weight: 3 },
             { word: "not null", weight: 4 },
             { word: "maxlength", weight: 3 },
@@ -964,46 +1046,78 @@ const REVIEW_CATEGORIES = {
             { word: "exists", weight: 3 },
             { word: "requiredif", weight: 4 },
             { word: "invalid", weight: 3 },
-            { word: "constraint", weight: 5 },
             { word: "sanitization", weight: 4 }
         ]
     },
     "Business Logic": {
         keywords: [
-            { word: "domain", weight: 5 },
+            // Existing
+            { word: "logic", weight: 5 },
+            { word: "rule", weight: 4 },
             { word: "workflow", weight: 5 },
+            { word: "business", weight: 4 },
+            { word: "calculation", weight: 5 },
+            { word: "formula", weight: 4 },
+            { word: "process", weight: 3 },
+            { word: "decision", weight: 4 },
+            { word: "status", weight: 3 },
+            { word: "transition", weight: 4 },
+            // New
+            { word: "domain", weight: 5 },
             { word: "approval", weight: 4 },
             { word: "state", weight: 3 },
-            { word: "transition", weight: 4 },
-            { word: "condition", weight: 4 },
-            { word: "calculation", weight: 5 },
             { word: "eligibility", weight: 4 },
-            { word: "decision", weight: 4 },
             { word: "rule engine", weight: 5 },
             { word: "business rule", weight: 5 }
         ]
     },
     "Database": {
         keywords: [
-            { word: "dbcontext", weight: 5 },
-            { word: "entity framework", weight: 5 },
+            // Existing
+            { word: "sql", weight: 4 },
+            { word: "database", weight: 5 },
+            { word: "db", weight: 3 },
+            { word: "table", weight: 3 },
+            { word: "column", weight: 2 },
+            { word: "query", weight: 4 },
+            { word: "entity", weight: 3 },
             { word: "repository", weight: 5 },
-            { word: "transaction", weight: 5 },
+            { word: "dbcontext", weight: 5 },
+            { word: "migration", weight: 4 },
+            { word: "index", weight: 3 },
+            { word: "join", weight: 3 },
+            { word: "foreign key", weight: 5 },
+            { word: "primary key", weight: 5 },
             { word: "stored procedure", weight: 5 },
             { word: "view", weight: 3 },
+            // New
+            { word: "entity framework", weight: 5 },
+            { word: "transaction", weight: 5 },
             { word: "trigger", weight: 4 },
             { word: "sequence", weight: 3 },
-            { word: "constraint", weight: 4 },
             { word: "normalization", weight: 4 },
             { word: "deadlock", weight: 5 },
-            { word: "indexing", weight: 4 },
-            { word: "sql", weight: 3 },
-            { word: "table", weight: 2 },
-            { word: "column", weight: 1 }
+            { word: "indexing", weight: 4 }
         ]
     },
     "API & Integration": {
         keywords: [
+            // Existing
+            { word: "api", weight: 5 },
+            { word: "endpoint", weight: 5 },
+            { word: "request", weight: 4 },
+            { word: "response", weight: 4 },
+            { word: "json", weight: 3 },
+            { word: "xml", weight: 3 },
+            { word: "rest", weight: 4 },
+            { word: "soap", weight: 4 },
+            { word: "integration", weight: 5 },
+            { word: "mapping", weight: 3 },
+            { word: "serializer", weight: 4 },
+            { word: "deserializer", weight: 4 },
+            { word: "contract", weight: 5 },
+            { word: "interface", weight: 4 },
+            // New
             { word: "grpc", weight: 5 },
             { word: "webhook", weight: 5 },
             { word: "swagger", weight: 5 },
@@ -1011,7 +1125,6 @@ const REVIEW_CATEGORIES = {
             { word: "serialization", weight: 4 },
             { word: "deserialization", weight: 4 },
             { word: "payload", weight: 4 },
-            { word: "contract", weight: 5 },
             { word: "http", weight: 3 },
             { word: "https", weight: 3 },
             { word: "postman", weight: 4 },
@@ -1020,15 +1133,28 @@ const REVIEW_CATEGORIES = {
     },
     "Architecture": {
         keywords: [
+            // Existing
+            { word: "service", weight: 4 },
+            { word: "factory", weight: 5 },
+            { word: "dependency", weight: 4 },
+            { word: "inject", weight: 4 },
+            { word: "architecture", weight: 5 },
+            { word: "layer", weight: 3 },
+            { word: "dto", weight: 4 },
+            { word: "model", weight: 3 },
+            { word: "controller", weight: 4 },
+            { word: "manager", weight: 3 },
+            { word: "handler", weight: 4 },
+            { word: "provider", weight: 4 },
+            { word: "adapter", weight: 5 },
+            { word: "mediator", weight: 5 },
+            { word: "strategy", weight: 5 },
+            // New
             { word: "solid", weight: 5 },
             { word: "ioc", weight: 5 },
             { word: "dependency injection", weight: 5 },
             { word: "cqrs", weight: 5 },
-            { word: "mediator", weight: 5 },
-            { word: "adapter", weight: 5 },
-            { word: "factory", weight: 5 },
             { word: "builder", weight: 5 },
-            { word: "strategy", weight: 5 },
             { word: "singleton", weight: 5 },
             { word: "repository pattern", weight: 5 },
             { word: "service layer", weight: 5 },
@@ -1037,6 +1163,22 @@ const REVIEW_CATEGORIES = {
     },
     "Performance": {
         keywords: [
+            // Existing
+            { word: "performance", weight: 5 },
+            { word: "optimize", weight: 4 },
+            { word: "optimization", weight: 4 },
+            { word: "cache", weight: 4 },
+            { word: "memory", weight: 4 },
+            { word: "cpu", weight: 3 },
+            { word: "timeout", weight: 4 },
+            { word: "slow", weight: 3 },
+            { word: "parallel", weight: 4 },
+            { word: "thread", weight: 3 },
+            { word: "async", weight: 4 },
+            { word: "await", weight: 4 },
+            { word: "bulk", weight: 4 },
+            { word: "batch", weight: 3 },
+            // New
             { word: "latency", weight: 5 },
             { word: "throughput", weight: 5 },
             { word: "response time", weight: 5 },
@@ -1052,6 +1194,19 @@ const REVIEW_CATEGORIES = {
     },
     "Security": {
         keywords: [
+            // Existing
+            { word: "security", weight: 5 },
+            { word: "permission", weight: 4 },
+            { word: "role", weight: 3 },
+            { word: "authentication", weight: 5 },
+            { word: "authorization", weight: 5 },
+            { word: "encrypt", weight: 4 },
+            { word: "decrypt", weight: 4 },
+            { word: "token", weight: 4 },
+            { word: "jwt", weight: 5 },
+            { word: "access", weight: 3 },
+            { word: "identity", weight: 4 },
+            // New
             { word: "csrf", weight: 5 },
             { word: "xss", weight: 5 },
             { word: "sql injection", weight: 5 },
@@ -1064,12 +1219,28 @@ const REVIEW_CATEGORIES = {
             { word: "salt", weight: 4 },
             { word: "oauth", weight: 5 },
             { word: "bearer", weight: 4 },
-            { word: "encryption", weight: 5 },
-            { word: "authorization", weight: 4 }
+            { word: "encryption", weight: 5 }
         ]
     },
     "UI": {
         keywords: [
+            // Existing
+            { word: "ui", weight: 5 },
+            { word: "ux", weight: 5 },
+            { word: "screen", weight: 3 },
+            { word: "page", weight: 3 },
+            { word: "button", weight: 3 },
+            { word: "layout", weight: 3 },
+            { word: "css", weight: 3 },
+            { word: "html", weight: 3 },
+            { word: "javascript", weight: 4 },
+            { word: "jquery", weight: 4 },
+            { word: "frontend", weight: 4 },
+            { word: "popup", weight: 3 },
+            { word: "dialog", weight: 3 },
+            { word: "grid", weight: 3 },
+            { word: "form", weight: 3 },
+            // New
             { word: "react", weight: 5 },
             { word: "angular", weight: 5 },
             { word: "vue", weight: 5 },
@@ -1082,162 +1253,246 @@ const REVIEW_CATEGORIES = {
             { word: "modal", weight: 4 },
             { word: "tooltip", weight: 3 },
             { word: "dropdown", weight: 3 },
-            { word: "datatable", weight: 4 }
+            { word: "datatable", weight: 4 },
+            { word: "textbox", weight: 3 },
+            { word: "combobox", weight: 3 },
+            { word: "tab", weight: 3 }
         ]
     },
     "Reports": {
         keywords: [
+            // Existing
+            { word: "report", weight: 5 },
+            { word: "print", weight: 3 },
+            { word: "pdf", weight: 4 },
+            { word: "excel", weight: 4 },
+            { word: "export", weight: 3 },
+            { word: "import", weight: 3 },
+            { word: "dashboard", weight: 5 },
+            { word: "chart", weight: 4 },
+            { word: "graph", weight: 3 },
+            // New
             { word: "rdlc", weight: 5 },
             { word: "ssrs", weight: 5 },
             { word: "power bi", weight: 5 },
-            { word: "chart", weight: 4 },
-            { word: "dashboard", weight: 5 },
             { word: "pivot", weight: 4 },
             { word: "grouping", weight: 3 },
             { word: "filter", weight: 3 },
             { word: "aggregation", weight: 4 }
         ]
     },
-    "Code Quality": {
-        keywords: [
-            { word: "code smell", weight: 5 },
-            { word: "cyclomatic complexity", weight: 5 },
-            { word: "maintainability", weight: 5 },
-            { word: "technical debt", weight: 5 },
-            { word: "duplicate code", weight: 5 },
-            { word: "dead code", weight: 5 },
-            { word: "refactoring", weight: 4 },
-            { word: "cleanup", weight: 3 },
-            { word: "readability", weight: 4 },
-            { word: "hardcoded", weight: 4 },
-            { word: "magic number", weight: 5 },
-            { word: "sonarqube", weight: 5 }
-        ]
-    },
-    "Testing": {
-        keywords: [
-            { word: "test case", weight: 5 },
-            { word: "integration test", weight: 5 },
-            { word: "unit test", weight: 5 },
-            { word: "automation", weight: 4 },
-            { word: "selenium", weight: 5 },
-            { word: "mock", weight: 4 },
-            { word: "stub", weight: 4 },
-            { word: "assertion", weight: 4 },
-            { word: "coverage", weight: 5 },
-            { word: "nunit", weight: 5 },
-            { word: "xunit", weight: 5 },
-            { word: "mstest", weight: 5 }
-        ]
-    },
     "Naming & Standards": {
         keywords: [
+            // Existing
+            { word: "rename", weight: 3 },
+            { word: "naming", weight: 4 },
+            { word: "convention", weight: 4 },
+            { word: "standard", weight: 4 },
+            { word: "camel", weight: 3 },
+            { word: "pascal", weight: 3 },
+            { word: "coding standard", weight: 5 },
+            { word: "style", weight: 3 },
+            // New
             { word: "camelcase", weight: 4 },
             { word: "pascalcase", weight: 4 },
             { word: "kebab-case", weight: 4 },
             { word: "snake_case", weight: 4 },
             { word: "coding guideline", weight: 5 },
-            { word: "convention", weight: 4 },
-            { word: "style", weight: 3 },
             { word: "formatting", weight: 3 },
+            // Dynamic BD codes (BD001 to BD099)
             ...Array.from({ length: 99 }, (_, i) => ({ word: `bd${String(i + 1).padStart(2, '0')}`, weight: 5 }))
+        ]
+    },
+    "Code Quality": {
+        keywords: [
+            // Existing
+            { word: "refactor", weight: 5 },
+            { word: "cleanup", weight: 3 },
+            { word: "clean up", weight: 3 },
+            { word: "duplicate", weight: 4 },
+            { word: "duplication", weight: 4 },
+            { word: "remove", weight: 2 },
+            { word: "unused", weight: 3 },
+            { word: "comment", weight: 2 },
+            { word: "simplify", weight: 4 },
+            { word: "improve", weight: 3 },
+            { word: "enhancement", weight: 3 },
+            { word: "readability", weight: 4 },
+            { word: "maintainability", weight: 5 },
+            { word: "complexity", weight: 4 },
+            { word: "magic number", weight: 5 },
+            { word: "hardcode", weight: 4 },
+            { word: "hardcoded", weight: 4 },
+            // New
+            { word: "code smell", weight: 5 },
+            { word: "cyclomatic complexity", weight: 5 },
+            { word: "technical debt", weight: 5 },
+            { word: "duplicate code", weight: 5 },
+            { word: "dead code", weight: 5 },
+            { word: "sonarqube", weight: 5 }
+        ]
+    },
+    "Testing": {
+        keywords: [
+            // Existing
+            { word: "unit test", weight: 5 },
+            { word: "integration test", weight: 5 },
+            { word: "test", weight: 2 }, // generic, low weight
+            { word: "mock", weight: 4 },
+            { word: "coverage", weight: 4 },
+            { word: "assert", weight: 4 },
+            { word: "review report", weight: 3 },
+            { word: "pull request", weight: 3 },
+            { word: "pr", weight: 3 },
+            // New
+            { word: "test case", weight: 5 },
+            { word: "automation", weight: 4 },
+            { word: "selenium", weight: 5 },
+            { word: "stub", weight: 4 },
+            { word: "assertion", weight: 4 },
+            { word: "nunit", weight: 5 },
+            { word: "xunit", weight: 5 },
+            { word: "mstest", weight: 5 }
         ]
     }
 };
 
+// ================================================================
+// 3. MAIN CLASSIFICATION FUNCTION
+// ================================================================
+
+/**
+ * Classify a review title into one or more categories based on keyword matching.
+ * Supports multi-label output if scores are close.
+ * @param {string} title - The review title to classify.
+ * @returns {string} - Category name or combination like "Database + Performance".
+ */
 function classifyReviewTitle(title) {
     if (!title) return "Code Quality";
 
-    const text = title;
-    // تجميع النتائج لكل تصنيف: { category: { totalScore, matchCount, phraseCount } }
-    const results = {};
+    // Step 1: Normalize text
+    const normalized = normalizeText(title);
+    if (!normalized) return "Code Quality";
+
+    // Step 2: Tokenize and stem
+    const tokens = normalized.split(/\s+/);
+    const stemmedTokens = tokens.map(token => stemWord(token));
+
+    // Step 3: Prepare results per category
+    const categoryScores = {};
 
     for (const category in REVIEW_CATEGORIES) {
         let totalScore = 0;
-        let matchCount = 0;
-        let phraseCount = 0; // عدد العبارات المركبة المطابقة (طول الكلمة > 10 مثلاً)
+        let strongMatchCount = 0; // weight >= 4
+        let phraseCount = 0;
+        let matchedWords = [];
 
         const entries = REVIEW_CATEGORIES[category].keywords;
         for (const entry of entries) {
-            const word = entry.word;
+            let word = entry.word.toLowerCase();
             const weight = entry.weight;
-            // استخدام مطابقة الكلمة الكاملة (حدود كلمة) بواسطة RegExp
-            // للعبارات التي تحتوي على مسافة، نستخدم مطابقة النص الكامل
+
+            // Determine if it's a phrase (contains space or hyphen)
+            const isPhrase = /\s|-/.test(word);
+
+            // Escape regex and build pattern
+            const escapedWord = escapeRegex(word);
+            // For phrase, match whole phrase with spaces normalized, else whole word boundary
             let pattern;
-            if (/\s/.test(word)) {
-                // عبارة مركبة: نبحث عنها كاملة مع حدود كلمة لكل جزء (اختياري)
-                // لكن الأسهل: نبحث عن العبارة كاملة غير حساسة لحالة الأحرف
-                pattern = new RegExp(`\\b${word.replace(/ /g, '\\s+')}\\b`, 'i');
+            if (isPhrase) {
+                // Normalize spaces in phrase to allow multiple spaces
+                const phraseParts = word.split(/\s+/);
+                const escapedParts = phraseParts.map(part => escapeRegex(part));
+                const patternStr = escapedParts.join('\\s+');
+                pattern = new RegExp('\\b' + patternStr + '\\b', 'i');
             } else {
-                pattern = new RegExp(`\\b${word}\\b`, 'i');
+                pattern = new RegExp('\\b' + escapedWord + '\\b', 'i');
             }
 
-            if (pattern.test(text)) {
+            // Also check stemmed version for single words
+            let matchFound = false;
+            if (pattern.test(normalized)) {
+                matchFound = true;
+            } else if (!isPhrase) {
+                // Try stemmed match
+                const stemmedWord = stemWord(word);
+                if (stemmedWord !== word) {
+                    const stemPattern = new RegExp('\\b' + escapeRegex(stemmedWord) + '\\b', 'i');
+                    if (stemPattern.test(normalized)) {
+                        matchFound = true;
+                    }
+                }
+            }
+
+            if (matchFound) {
                 totalScore += weight;
-                matchCount++;
-                if (word.length > 10) phraseCount++; // عبارات طويلة غالباً مركبة
+                matchedWords.push(word);
+                if (weight >= 4) strongMatchCount++;
+                if (isPhrase) phraseCount++;
             }
         }
 
-        // Bonus إذا ظهرت أكثر من كلمة قوية (وزن >= 4)
+        // Apply bonus based on number of strong matches
         let bonus = 0;
-        const strongMatches = entries.filter(e => e.weight >= 4 && new RegExp(`\\b${e.word.replace(/ /g, '\\s+')}\\b`, 'i').test(text));
-        if (strongMatches.length >= 2) bonus += 2;
+        if (strongMatchCount >= 5) bonus = 5;
+        else if (strongMatchCount >= 4) bonus = 4;
+        else if (strongMatchCount >= 3) bonus = 3;
+        else if (strongMatchCount >= 2) bonus = 2;
 
-        results[category] = {
-            totalScore: totalScore + bonus,
-            matchCount,
-            phraseCount
+        totalScore += bonus;
+
+        // Store results
+        categoryScores[category] = {
+            score: totalScore,
+            strongMatches: strongMatchCount,
+            phraseCount: phraseCount,
+            matchedWords: matchedWords
         };
     }
 
-    // استخراج التصنيفات ذات الدرجات الأعلى
+    // Step 4: Find max score and collect categories within threshold
     let maxScore = -1;
-    let topCategories = [];
-
-    for (const category in results) {
-        const score = results[category].totalScore;
-        if (score > maxScore) {
-            maxScore = score;
-            topCategories = [category];
-        } else if (score === maxScore) {
-            topCategories.push(category);
+    for (const cat in categoryScores) {
+        if (categoryScores[cat].score > maxScore) {
+            maxScore = categoryScores[cat].score;
         }
     }
 
-    // إذا لم يكن هناك أي تطابق
     if (maxScore === 0) {
-        // كلمات عامة: نعطي Code Quality بشكل افتراضي
-        if (/\b(fix|bug|review|change|modify|add|update)\b/i.test(text)) {
+        // Fallback: if no strong match, check for common generic words
+        if (tokens.some(t => GENERIC_WORDS.has(t))) {
             return "Code Quality";
         }
         return "Code Quality";
     }
 
-    // معالجة التعادل
-    if (topCategories.length > 1) {
-        // ترتيب حسب عدد المطابقات، ثم عدد العبارات المركبة
-        topCategories.sort((a, b) => {
-            const aMatch = results[a].matchCount;
-            const bMatch = results[b].matchCount;
-            if (aMatch !== bMatch) return bMatch - aMatch;
-
-            const aPhrase = results[a].phraseCount;
-            const bPhrase = results[b].phraseCount;
-            return bPhrase - aPhrase;
-        });
-
-        // إذا كان الفرق في الدرجة بين الأول والثاني <= 1، نعتبرهما متقاربين ونرجع معاً
-        const first = topCategories[0];
-        const second = topCategories[1];
-        if (second && (results[first].totalScore - results[second].totalScore) <= 1) {
-            // نرجع كلا التصنيفين مفصولين بـ " + "
-            return `${first} + ${second}`;
+    // Threshold: include categories with score >= maxScore - 1 (i.e., within 1 point)
+    const threshold = maxScore - 1;
+    let topCategories = [];
+    for (const cat in categoryScores) {
+        if (categoryScores[cat].score >= threshold) {
+            topCategories.push(cat);
         }
-        return first;
     }
 
-    return topCategories[0];
+    // If multiple, sort by score desc, then strongMatches desc, then phraseCount desc
+    topCategories.sort((a, b) => {
+        const aScore = categoryScores[a].score;
+        const bScore = categoryScores[b].score;
+        if (aScore !== bScore) return bScore - aScore;
+        const aStrong = categoryScores[a].strongMatches;
+        const bStrong = categoryScores[b].strongMatches;
+        if (aStrong !== bStrong) return bStrong - aStrong;
+        return categoryScores[b].phraseCount - categoryScores[a].phraseCount;
+    });
+
+    // If only one category, return it
+    if (topCategories.length === 1) {
+        return topCategories[0];
+    }
+
+    // If multiple, join with " + "
+    return topCategories.join(" + ");
 }
 
 function renderTeamView() {
