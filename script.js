@@ -2716,8 +2716,18 @@ function renderFilteredCharts(historicalData, selectedArea) {
             ctCard.parentNode.insertBefore(csCard, ctCard.nextSibling);
         } else {
             const container = document.getElementById('detailedChartsSection') || document.getElementById('historical-analytics-view');
-            container.appendChild(csCard);
+                        container.appendChild(csCard);
         }
+    } else {
+        let title = csCard.querySelector('.chart-title');
+        if (!title) {
+            title = document.createElement('h4');
+            title.className = 'chart-title';
+            title.style.margin = '0 0 10px 0';
+            title.style.color = '#2c3e50';
+            csCard.insertBefore(title, csCard.querySelector('canvas'));
+        }
+        title.textContent = `📊 Completed Stories (${selectedArea})`;
     }
     const completedData = metricsByIteration.map(m => m.completedStories || 0);
     const totalData = metricsByIteration.map(m => m.totalStories || 0);
@@ -3095,7 +3105,9 @@ function calculateControlLimits(data) {
 }
 
 
-function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
+// ==================== 1. دالة renderControlChart (مع SMA و عنوان) ====================
+
+function renderControlChart(canvasId, labels, data, label, color, yLabel = '', chartTitle = '') {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -3105,6 +3117,29 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
         delete window[canvasId + 'Chart'];
     }
 
+    // التأكد من وجود البطاقة وإضافة العنوان إن لم يكن موجوداً
+    let card = canvas.closest('.card');
+    if (!card) {
+        card = document.createElement('div');
+        card.className = 'card';
+        card.style.marginBottom = '30px';
+        card.style.padding = '20px';
+        canvas.parentNode.replaceChild(card, canvas);
+        card.appendChild(canvas);
+    }
+    // إضافة أو تحديث العنوان
+    let titleEl = card.querySelector('.chart-title');
+    if (!titleEl) {
+        titleEl = document.createElement('h4');
+        titleEl.className = 'chart-title';
+        titleEl.style.margin = '0 0 10px 0';
+        titleEl.style.color = '#2c3e50';
+        titleEl.style.fontSize = '1.1em';
+        card.insertBefore(titleEl, canvas);
+    }
+    titleEl.textContent = chartTitle || label || 'Chart';
+
+    // ---- حساب المتحكمات ----
     const { mean, ucl, lcl, sigma } = calculateControlLimits(data);
 
     const oneSigmaUp = mean + sigma;
@@ -3112,17 +3147,22 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
     const twoSigmaUp = mean + 2 * sigma;
     const twoSigmaDown = mean - 2 * sigma;
 
-    // ---- Trend & Forecast (Linear Regression) ----
-    const indices = data.map((_, i) => i);
-    const { slope, intercept } = linearRegression(indices, data);
-    const trendHistorical = indices.map(i => slope * i + intercept);
-    const lastIndex = indices.length - 1;
-    const futureIndices = [1, 2, 3].map(i => lastIndex + i);
-    const forecastValues = futureIndices.map(i => slope * i + intercept);
+    // ---- حساب المتوسط المتحرك البسيط (SMA) مع نافذة 3 ----
+    const windowSize = 3;
+    const smaHistorical = [];
+    for (let i = 0; i < data.length; i++) {
+        const start = Math.max(0, i - windowSize + 1);
+        const windowData = data.slice(start, i + 1);
+        const avg = windowData.reduce((a, b) => a + b, 0) / windowData.length;
+        smaHistorical.push(avg);
+    }
+    // آخر قيمة للمتوسط المتحرك (للتوقع)
+    const lastSma = smaHistorical.length > 0 ? smaHistorical[smaHistorical.length - 1] : 0;
+    const futureValues = [lastSma, lastSma, lastSma];
     const extendedLabels = [...labels, 'F-1', 'F-2', 'F-3'];
-    
+
     const extendNull = (arr) => [...arr, null, null, null];
-    
+
     const extendedData = extendNull(data);
     const extendedUcl = extendNull(Array(labels.length).fill(ucl));
     const extendedLcl = extendNull(Array(labels.length).fill(lcl));
@@ -3131,10 +3171,11 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
     const extended1Down = extendNull(Array(labels.length).fill(oneSigmaDown));
     const extended2Up = extendNull(Array(labels.length).fill(twoSigmaUp));
     const extended2Down = extendNull(Array(labels.length).fill(twoSigmaDown));
-    
-    const trendHistoricalExtended = [...trendHistorical, null, null, null];
-    const forecastExtended = [...Array(labels.length).fill(null), ...forecastValues];
 
+    const smaHistoricalExtended = [...smaHistorical, null, null, null];
+    const forecastExtended = [...Array(labels.length).fill(null), ...futureValues];
+
+    // ألوان النقاط حسب الخروج عن الحدود
     const pointColors = data.map(val => {
         if (val > ucl || val < lcl) return '#e74c3c';
         if (val > twoSigmaUp || val < twoSigmaDown) return '#f39c12';
@@ -3227,8 +3268,8 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             borderWidth: 1.5,
         },
         {
-            label: 'Trend Line',
-            data: trendHistoricalExtended,
+            label: 'Moving Average (SMA-3)',
+            data: smaHistoricalExtended,
             borderColor: '#8e44ad',
             borderDash: [4, 4],
             backgroundColor: 'transparent',
@@ -3237,7 +3278,7 @@ function renderControlChart(canvasId, labels, data, label, color, yLabel = '') {
             borderWidth: 2,
         },
         {
-            label: 'Forecast (3 pts)',
+            label: 'Forecast (SMA-3)',
             data: forecastExtended,
             borderColor: '#e74c3c',
             borderDash: [6, 3],
@@ -3527,6 +3568,17 @@ async function renderHistoricalAnalyticsView() {
         } else {
             container.appendChild(csCard);
         }
+    } else {
+        // تحديث العنوان إن وجد
+        let title = csCard.querySelector('.chart-title');
+        if (!title) {
+            title = document.createElement('h4');
+            title.className = 'chart-title';
+            title.style.margin = '0 0 10px 0';
+            title.style.color = '#2c3e50';
+            csCard.insertBefore(title, csCard.querySelector('canvas'));
+        }
+        title.textContent = '📊 Completed Stories (Overall)';
     }
     const completedData = historicalData.map(d => d.completedStories || 0);
     const totalStoriesData = historicalData.map(d => d.totalStories || 0);
