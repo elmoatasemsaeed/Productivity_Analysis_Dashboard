@@ -652,7 +652,7 @@ function renderIterationView() {
     };
 
     processedStories.forEach(us => {
-        const storyEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig || 0);
+        const storyEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig || 0) + us.rework.timeEstimation + us.reviewStats.estimation;
         const storyReviewTime = (us.reviewStats.devActual + us.reviewStats.testActual);
         const storyAct = us.devEffort.actual + us.testEffort.actual + (us.dbEffort?.actual || 0) + us.rework.actualTime + storyReviewTime;
 
@@ -743,10 +743,9 @@ function renderIterationView() {
         let a = { est: 0, act: 0, rw: 0, rv: 0 };
         
         areaStories.forEach(s => {
-            const sEst = s.devEffort.orig + s.testEffort.orig + (s.dbEffort?.orig || 0);
+            const sEst = s.devEffort.orig + s.testEffort.orig + (s.dbEffort?.orig || 0) + s.rework.timeEstimation + s.reviewStats.estimation;
             const sRv = (s.reviewStats.devActual + s.reviewStats.testActual);
             const sAct = s.devEffort.actual + s.testEffort.actual + (s.dbEffort?.actual || 0) + s.rework.actualTime + sRv;
-            a.est += sEst; a.act += sAct; a.rw += s.rework.actualTime; a.rv += sRv;
         });
 
         const aVar = ((a.act - a.est) / (a.est || 1)) * 100;
@@ -1719,7 +1718,7 @@ function renderTeamView() {
         stats.devCountCount=devCountCount; stats.testerCountCount=testerCountCount; stats.dbCountCount=dbCountCount;
 
         grouped[area].forEach(us => {
-            const sEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig||0);
+            const sEst = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig||0) + us.rework.timeEstimation + us.reviewStats.estimation;
             const sRvTime = us.reviewStats.devActual + us.reviewStats.testActual;
             const sAct = us.devEffort.actual + us.testEffort.actual + (us.dbEffort?.actual||0) + us.rework.actualTime + sRvTime;
             stats.totalEst += sEst; stats.totalAct += sAct; stats.reworkTime += us.rework.actualTime; stats.reviewTime += sRvTime;
@@ -2320,7 +2319,7 @@ async function fetchIterationSummary(config) {
         }
         const ba = businessMap.get(area);
         
-        const est = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig || 0);
+        const est = us.devEffort.orig + us.testEffort.orig + (us.dbEffort?.orig || 0) + us.rework.timeEstimation + us.reviewStats.estimation;
         const devActCore = us.devEffort.actual;
         const testActCore = us.testEffort.actual;
         const dbActCore = us.dbEffort?.actual || 0;
