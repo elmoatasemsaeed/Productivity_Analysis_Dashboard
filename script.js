@@ -1821,11 +1821,20 @@ function renderTeamView() {
                     📊 Stories: <b>${stats.closedStoriesCount} / ${stats.totalStories} Closed</b>
                 </span>
             </div>
-            <div style="display:flex;gap:15px;margin-bottom:25px;background:#f8f9fa;padding:12px;border-radius:8px;font-size:0.9em;color:#57606f;border:1px solid #edeec4;">
-                <span>👥 <b>FTE Dev Capacity:</b> ${devCountCount.toFixed(2)}</span> | 
-                <span>🧪 <b>FTE Tester Capacity:</b> ${testerCountCount.toFixed(2)}</span> | 
-                <span>🗄️ <b>FTE DB Capacity:</b> ${dbCountCount.toFixed(2)}</span>
-            </div>
+            <div style="display:flex;gap:15px;margin-bottom:25px;background:#f8f9fa;padding:12px;border-radius:8px;font-size:0.9em;color:#57606f;border:1px solid #edeec4;flex-wrap:wrap;">
+    <div>
+        <span>👥 <b>FTE Dev Capacity:</b> ${devCountCount.toFixed(2)}</span>
+        <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaDevs[area] || []).join(', ')}</div>
+    </div>
+    <div>
+        <span>🧪 <b>FTE Tester Capacity:</b> ${testerCountCount.toFixed(2)}</span>
+        <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaTesters[area] || []).join(', ')}</div>
+    </div>
+    <div>
+        <span>🗄️ <b>FTE DB Capacity:</b> ${dbCountCount.toFixed(2)}</span>
+        <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaDbs[area] || []).join(', ')}</div>
+    </div>
+</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:30px;">
                 <div style="background:#fafafa;border-radius:10px;padding:20px;border-left:4px solid ${varianceColor};box-shadow:0 2px 5px rgba(0,0,0,0.02);">
                     <div style="font-size:0.85em;color:#747d8c;text-transform:uppercase;font-weight:600;">Effort Variance</div>
