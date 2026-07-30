@@ -1786,8 +1786,9 @@ function renderTeamView() {
 
         let thresholdDays = null;
         let areaLower = area.toLowerCase();
-        if (areaLower.includes('registration') || areaLower.includes('internal lab')) thresholdDays = 18;
-        else if (areaLower.includes('front') || areaLower.includes('financial')) thresholdDays = 9;
+       if (areaLower.includes('registration')) thresholdDays = 12;
+        else if (areaLower.includes('internal lab')) thresholdDays = 16;
+        else if (areaLower.includes('financial')) thresholdDays = 11;
         let thresholdMsg = '';
         if (thresholdDays !== null) {
             thresholdMsg = parseFloat(avgCycleTime) > thresholdDays ? `⚠️ Exceeds threshold (${thresholdDays}d max)` : `✅ Within threshold (≤${thresholdDays}d)`;
