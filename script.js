@@ -1709,7 +1709,11 @@ function renderTeamView() {
             reviewDistributionByStory:{},reviewSeverityByStory:{},
             bugTitles:[],bugCategories:[],reviewTitles:[],reviewActivities:[],reviewCategories:[],
             maxCycleTime:0,maxCycleTimeStoryId:null,maxCycleTimeStoryEst:0,maxCycleTimeStoryRework:0,
-            testCaseTotal:0,testCaseDesign:0,testCaseExecuted:0,testCaseStatusCounts:{}
+            testCaseTotal:0,testCaseDesign:0,testCaseExecuted:0,testCaseStatusCounts:{},
+            // NEW: مجموع ساعات التطوير الفعلية (تشمل التاسكات + البجات)
+            totalDevActualWithBugs: 0,
+            // NEW: مجموع ساعات الاختبار الفعلية (من التاسكات فقط)
+            totalTestActualOnly: 0
         };
         let devCountCount=0,testerCountCount=0,dbCountCount=0;
         areaDevs[area].forEach(d => devCountCount += (devParticipation[d]?1/devParticipation[d]:0));
@@ -1728,6 +1732,12 @@ function renderTeamView() {
             stats.totalUatBugs += (us.rework.uatBugsCount||0); stats.totalIterationBugs += (us.rework.iterationBugsCount||0);
             stats.genericBugCount += (us.rework.generic?us.rework.generic.count:0); stats.specificBugCount += (us.rework.specific?us.rework.specific.count:0);
 
+            // --- جمع الساعات الفعلية الجديدة ---
+            // Dev time = devEffort.actual + dbEffort.actual + rework.actualTime (كل البجات)
+            stats.totalDevActualWithBugs += us.devEffort.actual + (us.dbEffort?.actual||0) + us.rework.actualTime;
+            // Test time = testEffort.actual فقط (من تاسكات Testing)
+            stats.totalTestActualOnly += us.testEffort.actual;
+
             const dev = us.devLead||'Unassigned';
             stats.bugDistributionByDev[dev] = (stats.bugDistributionByDev[dev]||0) + us.bugs.length;
             const storyId = us.id||'Unknown';
@@ -1741,7 +1751,6 @@ function renderTeamView() {
                 else if (sev.includes('4 - Low')) stats.bugSeverityByStory[storyId].low++;
             });
 
-            // --- Reviews per story ---
             const reviewCount = us.reviews ? us.reviews.length : 0;
             stats.reviewDistributionByStory[storyId] = (stats.reviewDistributionByStory[storyId]||0) + reviewCount;
             if (!stats.reviewSeverityByStory[storyId]) stats.reviewSeverityByStory[storyId] = {critical:0,high:0,medium:0,low:0};
@@ -1786,7 +1795,7 @@ function renderTeamView() {
 
         let thresholdDays = null;
         let areaLower = area.toLowerCase();
-       if (areaLower.includes('registration')) thresholdDays = 12;
+        if (areaLower.includes('registration')) thresholdDays = 12;
         else if (areaLower.includes('internal lab')) thresholdDays = 16;
         else if (areaLower.includes('financial')) thresholdDays = 11;
         let thresholdMsg = '';
@@ -1822,19 +1831,28 @@ function renderTeamView() {
                 </span>
             </div>
             <div style="display:flex;gap:15px;margin-bottom:25px;background:#f8f9fa;padding:12px;border-radius:8px;font-size:0.9em;color:#57606f;border:1px solid #edeec4;flex-wrap:wrap;">
-    <div>
-        <span>👥 <b>FTE Dev Capacity:</b> ${devCountCount.toFixed(2)}</span>
-        <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaDevs[area] || []).join(', ')}</div>
-    </div>
-    <div>
-        <span>🧪 <b>FTE Tester Capacity:</b> ${testerCountCount.toFixed(2)}</span>
-        <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaTesters[area] || []).join(', ')}</div>
-    </div>
-    <div>
-        <span>🗄️ <b>FTE DB Capacity:</b> ${dbCountCount.toFixed(2)}</span>
-        <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaDbs[area] || []).join(', ')}</div>
-    </div>
-</div>
+                <div>
+                    <span>👥 <b>FTE Dev Capacity:</b> ${devCountCount.toFixed(2)}</span>
+                    <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaDevs[area] || []).join(', ')}</div>
+                </div>
+                <div>
+                    <span>🧪 <b>FTE Tester Capacity:</b> ${testerCountCount.toFixed(2)}</span>
+                    <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaTesters[area] || []).join(', ')}</div>
+                </div>
+                <div>
+                    <span>🗄️ <b>FTE DB Capacity:</b> ${dbCountCount.toFixed(2)}</span>
+                    <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">${Array.from(areaDbs[area] || []).join(', ')}</div>
+                </div>
+                <!-- NEW: إجمالي ساعات التطوير والاختبار -->
+                <div>
+                    <span>💻 <b>Total Actual Dev time:</b> ${stats.totalDevActualWithBugs.toFixed(1)}h</span>
+                    <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">includes Tasks + Bugs</div>
+                </div>
+                <div>
+                    <span>🧪 <b>Total Actual Test time:</b> ${stats.totalTestActualOnly.toFixed(1)}h</span>
+                    <div style="font-size:0.7em;color:#7f8c8d;margin-top:2px;">from Testing Tasks only</div>
+                </div>
+            </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:30px;">
                 <div style="background:#fafafa;border-radius:10px;padding:20px;border-left:4px solid ${varianceColor};box-shadow:0 2px 5px rgba(0,0,0,0.02);">
                     <div style="font-size:0.85em;color:#747d8c;text-transform:uppercase;font-weight:600;">Effort Variance</div>
