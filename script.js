@@ -35,6 +35,23 @@ let azurePAT = localStorage.getItem('az_pat') || "";
 let evChart = null, rwChart = null, ctChart = null, avgWorkloadChart = null;
 let resourceDistChart = null, bugSeverityChart = null, bugTypeChart = null;
 
+// ===== Timeline Cache (State Log + PRs per story) =====
+let timelineCache = {};           // { storyId: { revisions:[], prs:[], timeline:[] } }
+const TIMELINE_COLORS = {
+    'dev':           '#3498db',
+    'review':        '#e67e22',
+    'testing':       '#2ecc71',
+    'bugfix':        '#e74c3c',
+    'senior-review': '#8e44ad'
+};
+const TIMELINE_LABELS = {
+    'dev':           '💻 Development',
+    'review':        '🔍 Senior Review',
+    'testing':       '🧪 Testing',
+    'bugfix':        '🐞 Bug Fixing (parallel testing)',
+    'senior-review': '👨‍💼 Senior Tester Review'
+};
+
 // --- Functions ---
 
 function saveUsers() {
@@ -70,6 +87,188 @@ async function attemptLogin() {
         document.getElementById('login-overlay').style.display = 'none';
     } else {
         alert("Invalid credentials");
+    }
+}
+
+// ============================================================
+//  TIMELINE DATA FETCHING FROM AZURE (State Log + PRs)
+// ============================================================
+
+async function fetchStoryRevisions(storyId, org, project) {
+    const pat = localStorage.getItem('azure_pat');
+    if (!pat) throw new Error("Azure PAT missing");
+    const authHeader = { 'Authorization': 'Basic ' + btoa(':' + pat) };
+    const url = `https://dev.azure.com/${org}/${project}/_apis/wit/workitems/${storyId}/revisions?api-version=6.0`;
+    const res = await fetch(url, { headers: authHeader });
+    if (!res.ok) throw new Error(`Revisions ${storyId}: ${res.status}`);
+    const data = await res.json();
+    return data.value || [];
+}
+
+async function fetchStoryPRs(storyId, org, project) {
+    const pat = localStorage.getItem('azure_pat');
+    if (!pat) return [];
+    const authHeader = { 'Authorization': 'Basic ' + btoa(':' + pat) };
+    const url = `https://dev.azure.com/${org}/${project}/_apis/wit/workitems/${storyId}?$expand=relations&api-version=6.0`;
+    const res = await fetch(url, { headers: authHeader });
+    if (!res.ok) return [];
+    const item = await res.json();
+    const prRefs = [];
+    if (item.relations) {
+        for (const rel of item.relations) {
+            if (rel.rel === 'ArtifactLink' && (rel.attributes?.name || '').toLowerCase().includes('pull request')) {
+                const match = rel.url.match(/PullRequestId\/(.+)/);
+                if (match) {
+                    const parts = decodeURIComponent(match[1]).split('/');
+                    if (parts.length >= 3) prRefs.push({ repoId: parts[1], prId: parts[2] });
+                }
+            }
+        }
+    }
+    const prs = [];
+    for (const ref of prRefs) {
+        try {
+            const prUrl = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${ref.repoId}/pullrequests/${ref.prId}?api-version=6.0`;
+            const prRes = await fetch(prUrl, { headers: authHeader });
+            if (prRes.ok) prs.push(await prRes.json());
+        } catch (e) { /* skip */ }
+    }
+    return prs;
+}
+
+// Build timeline phases from state transitions + PR lifecycle
+function buildStoryTimeline(us, revisions, prs) {
+    const transitions = [];
+    let lastState = null;
+    (revisions || []).forEach(rev => {
+        const state = rev.fields?.['System.State'];
+        const dateStr = rev.fields?.['System.ChangedDate'];
+        if (state && dateStr) {
+            const date = new Date(dateStr);
+            if (!isNaN(date) && state !== lastState) {
+                transitions.push({ state, date });
+                lastState = state;
+            }
+        }
+    });
+
+    if (transitions.length === 0) return [];
+
+    const sortedPRs = (prs || []).slice().sort((a, b) =>
+        new Date(a.creationDate) - new Date(b.creationDate)
+    );
+
+    // Build event list
+    const events = [];
+    transitions.forEach(t => events.push({ time: t.date, kind: 'state', state: t.state }));
+    sortedPRs.forEach(pr => {
+        events.push({ time: new Date(pr.creationDate), kind: 'pr-create', pr });
+        if (pr.closedDate) events.push({ time: new Date(pr.closedDate), kind: 'pr-close', pr });
+    });
+    events.sort((a, b) => a.time - b.time);
+
+    const phases = [];
+    const finalStates = ['Tested', 'Closed'];
+    const endTime = (() => {
+        for (let i = transitions.length - 1; i >= 0; i--) {
+            if (finalStates.includes(transitions[i].state)) return transitions[i].date;
+        }
+        return transitions[transitions.length - 1].date;
+    })();
+
+    let currentPhase = null;        // { type, start, meta }
+    let parallelTestStart = null;   // during bug fix
+    let prevType = 'dev';           // for resuming after PR
+
+    function openPhase(type, start, meta) { currentPhase = { type, start, meta: meta || {} }; }
+    function closePhase(at) {
+        if (currentPhase && at > currentPhase.start) {
+            phases.push({ type: currentPhase.type, start: currentPhase.start, end: at, ...currentPhase.meta });
+        }
+        currentPhase = null;
+    }
+
+    for (const ev of events) {
+        if (ev.kind === 'state') {
+            if (ev.state === 'Active') {
+                if (currentPhase && currentPhase.type === 'testing') {
+                    // Testing continues in parallel during bug fixing
+                    parallelTestStart = currentPhase.start;
+                    closePhase(ev.time);
+                    openPhase('bugfix', ev.time, { parallelTest: true, testStart: parallelTestStart });
+                } else {
+                    closePhase(ev.time);
+                    openPhase('dev', ev.time);
+                }
+            } else if (ev.state === 'Resolved') {
+                closePhase(ev.time);
+                openPhase('testing', ev.time);
+                parallelTestStart = null;
+            } else if (ev.state === 'To Be Reviewed') {
+                closePhase(ev.time);
+                openPhase('senior-review', ev.time);
+            } else if (finalStates.includes(ev.state)) {
+                closePhase(ev.time);
+            }
+        } else if (ev.kind === 'pr-create') {
+            if (currentPhase && (currentPhase.type === 'dev' || currentPhase.type === 'bugfix')) {
+                const resumedType = currentPhase.type;
+                const extraMeta = currentPhase.meta || {};
+                closePhase(ev.time);
+                openPhase('review', ev.time, {
+                    prTitle: ev.pr.title,
+                    prId: ev.pr.pullRequestId,
+                    resume: resumedType,
+                    resumeMeta: extraMeta
+                });
+                prevType = resumedType;
+            }
+        } else if (ev.kind === 'pr-close') {
+            if (currentPhase && currentPhase.type === 'review') {
+                const resume = currentPhase.meta.resume || prevType;
+                const resumeMeta = currentPhase.meta.resumeMeta || {};
+                closePhase(ev.time);
+                openPhase(resume, ev.time, resumeMeta);
+            }
+        }
+    }
+    closePhase(endTime);
+
+    // Merge consecutive same-type phases
+    const merged = [];
+    phases.forEach(p => {
+        const last = merged[merged.length - 1];
+        if (last && last.type === p.type && (p.start - last.end) < (1000 * 60 * 60 * 24)) {
+            last.end = p.end;
+            if (p.prTitle) last.prTitle = p.prTitle;
+        } else {
+            merged.push({ ...p });
+        }
+    });
+
+    return merged;
+}
+
+// Fetch timelines for all processed stories (called after processData)
+async function fetchAndBuildTimelinesForStories(org, project, statusDiv) {
+    timelineCache = {};
+    const total = processedStories.length;
+    if (total === 0) return;
+    let idx = 0;
+    for (const us of processedStories) {
+        idx++;
+        if (statusDiv) statusDiv.innerText = `⏳ Building timeline ${idx}/${total} (Story #${us.id})...`;
+        try {
+            const [revisions, prs] = await Promise.all([
+                fetchStoryRevisions(us.id, org, project),
+                fetchStoryPRs(us.id, org, project)
+            ]);
+            const timeline = buildStoryTimeline(us, revisions, prs);
+            timelineCache[us.id] = { revisions, prs, timeline };
+        } catch (e) {
+            console.warn(`Timeline fetch failed for story ${us.id}:`, e);
+            timelineCache[us.id] = { revisions: [], prs: [], timeline: [] };
+        }
     }
 }
 
@@ -766,6 +965,73 @@ function renderIterationView() {
     container.innerHTML = html;
 }
 
+// ============================================================
+//  RENDER STORY TIMELINE (replaces old tasks table)
+// ============================================================
+function renderTimelineHTML(us) {
+    const cached = timelineCache[us.id];
+    const timeline = cached?.timeline || [];
+
+    if (timeline.length === 0) {
+        return `<div class="timeline-info">📅 Timeline not available for this story yet.
+            <b>Please load data via "Fetch from Azure"</b> so the state log and PRs can be retrieved.</div>`;
+    }
+
+    const minTime = Math.min(...timeline.map(p => p.start.getTime()));
+    const maxTime = Math.max(...timeline.map(p => p.end.getTime()));
+    const span = Math.max(maxTime - minTime, 1);
+
+    const fmt = (d) => new Date(d).toLocaleString('en-GB', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const fmtShort = (d) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+
+    let segsHTML = '';
+    timeline.forEach(phase => {
+        const left = ((phase.start.getTime() - minTime) / span) * 100;
+        const width = Math.max(((phase.end.getTime() - phase.start.getTime()) / span) * 100, 0.6);
+        const days = Math.max(1, Math.round((phase.end - phase.start) / (1000 * 60 * 60 * 24)));
+        const hours = Math.max(0, Math.round((phase.end - phase.start) / (1000 * 60 * 60)));
+        const color = TIMELINE_COLORS[phase.type] || '#95a5a6';
+        const label = TIMELINE_LABELS[phase.type] || phase.type;
+        const tip = `${label}\nFrom: ${fmt(phase.start)}\nTo: ${fmt(phase.end)}\nDuration: ${days}d (${hours}h)${phase.prTitle ? '\nPR: ' + phase.prTitle : ''}${phase.parallelTest ? '\n(Testing running in parallel)' : ''}`;
+        segsHTML += `<div class="timeline-seg" style="left:${left}%; width:${width}%; background:${color};" title="${tip.replace(/"/g, '&quot;')}"></div>`;
+    });
+
+    const usedTypes = [...new Set(timeline.map(p => p.type))];
+    const legendHTML = usedTypes.map(t =>
+        `<span class="timeline-legend-item"><span class="legend-dot" style="background:${TIMELINE_COLORS[t] || '#95a5a6'};"></span>${TIMELINE_LABELS[t] || t}</span>`
+    ).join('');
+
+    const detailsHTML = timeline.map(phase => {
+        const days = Math.max(1, Math.round((phase.end - phase.start) / (1000 * 60 * 60 * 24)));
+        const color = TIMELINE_COLORS[phase.type] || '#95a5a6';
+        const label = TIMELINE_LABELS[phase.type] || phase.type;
+        return `<div class="timeline-detail-row">
+            <span class="legend-dot" style="background:${color};"></span>
+            <b style="min-width:180px;">${label}</b>
+            <span>${fmt(phase.start)} → ${fmt(phase.end)}</span>
+            <span style="color:#7f8c8d;">(${days} day${days !== 1 ? 's' : ''})</span>
+            ${phase.prTitle ? `<span style="color:#8e44ad;font-style:italic;">🔀 ${phase.prTitle}</span>` : ''}
+            ${phase.parallelTest ? `<span style="color:#e67e22;font-size:0.9em;">⚡ Testing in parallel</span>` : ''}
+        </div>`;
+    }).join('');
+
+    return `
+    <div class="timeline-wrapper">
+        <h5 style="margin:0 0 10px 0; color:#2c3e50;">📊 Story Timeline (State Log + PRs)</h5>
+        <div class="timeline-bar-container">
+            <div class="timeline-bar">${segsHTML}</div>
+            <div class="timeline-range">
+                <span>${fmtShort(minTime)}</span>
+                <span>${fmtShort(maxTime)}</span>
+            </div>
+        </div>
+        <div class="timeline-legend">${legendHTML}</div>
+        <div class="timeline-details">${detailsHTML}</div>
+    </div>`;
+}
+
 function renderBusinessView() {
     const container = document.getElementById('business-view');
     const grouped = groupBy(processedStories, 'businessArea');
@@ -876,49 +1142,8 @@ function renderBusinessView() {
     </tbody>
 </table>
 
+${renderTimelineHTML(us)}
 
-
-                    <h5 style="margin: 20px 0 10px 0; color: #2c3e50;">Tasks Timeline & Schedule:</h5>
-                    <table style="font-size: 0.85em; width: 100%;">
-                        <thead>
-                            <tr style="background:#eee;">
-                                <th>ID</th>
-                                <th>Task Name</th>
-                                <th>Activity</th>
-                                <th>Est</th>
-                                <th>Exp. Start</th>
-                                <th>Exp. End</th>
-                                <th>Act. Start</th>
-                                <th>Act. End</th> 
-                                <th>TS Total</th>
-                                <th>Delay</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${sortedTasks.map(t => {
-                                const tsTotal = (parseFloat(t['TimeSheet_DevActualTime']) || 0) + (parseFloat(t['TimeSheet_TestingActualTime']) || 0);
-                                const est = parseFloat(t['Original Estimation']) || 0;
-                                const actualEnd = t['Actual End'] || t['Resolved Date'];
-                                return `
-                                <tr>
-                                    <td>${t['ID']}</td>
-                                    <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t['Title']}">${t['Title'] || 'N/A'}</td>
-                                    <td>${t['Activity']}</td>
-                                    <td>${est}</td>
-                                    <td style="background-color: #e8f4fd; font-weight: 500;">${formatDate(t.expectedStart)}</td>
-                                    <td>${formatDate(t.expectedEnd)}</td>
-                                    <td style="background-color: #eafaf1; font-weight: 500;">${formatDate(t['Activated Date'])}</td>
-                                    <td>${formatDate(actualEnd)}</td> 
-                                    <td>${tsTotal}</td>
-                                    <td class="${calculateHourDiff(t.expectedStart, t['Activated Date']) > 0 ? 'alert-red' : ''}">
-                                        ${calculateHourDiff(t.expectedStart, t['Activated Date'])}h
-                                    </td>
-                                </tr>`;
-                            }).join('')}
-                        </tbody>
-                    </table>`;
-
-            html += `
                 <div style="background: #fdfdfd; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h5 style="margin: 0; color: #2c3e50;">Quality & Review Analysis</h5>
@@ -2231,8 +2456,11 @@ async function fetchFromAzure() {
             statusDiv.innerText = `⏳ Loading: ${allItemsDetails.length} / ${workItemIds.length}`;
         }
         rawData = allItemsDetails.map(item => mapAzureFields(item));
-        processData(); 
-        statusDiv.innerText = "✅ Data fetched successfully";
+        processData();
+        // NEW: Build timelines (state log + PRs) for each story
+        statusDiv.innerText = "⏳ Building timelines from Azure state log & PRs...";
+        await fetchAndBuildTimelinesForStories(config.org, config.project, statusDiv);
+        statusDiv.innerText = "✅ Data fetched successfully (with timelines)";
         showView('iteration-view');
     } catch (error) {
         console.error("Azure Integration Error:", error);
