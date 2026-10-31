@@ -2022,6 +2022,228 @@ ${renderTimelineHTML(us)}
 })(typeof global !== 'undefined' ? global : typeof window !== 'undefined' ? window : this);
 
 
+// ============================================================
+//  CONSOLIDATED TEAM TIMELINE (All Resources, All Stories)
+// ============================================================
+function renderTeamTimelineHTML() {
+    if (!processedStories || processedStories.length === 0) return '';
+
+    const resourcePhases = {};
+    let minTime = Infinity, maxTime = -Infinity;
+    let totalOverlapCount = 0;
+
+    processedStories.forEach(us => {
+        const cached = timelineCache[us.id];
+        if (!cached || !cached.timeline || cached.timeline.length === 0) return;
+
+        cached.timeline.forEach(phase => {
+            const start = new Date(phase.start).getTime();
+            const end = new Date(phase.end).getTime();
+            if (start < minTime) minTime = start;
+            if (end > maxTime) maxTime = end;
+
+            const isDevPhase    = ['dev', 'bugfix', 'review'].includes(phase.type);
+            const isTesterPhase = ['testing', 'senior-review'].includes(phase.type);
+
+            // --- Dev phases go to devLead ---
+            if (isDevPhase && us.devLead) {
+                const key = String(us.devLead).trim();
+                if (key) {
+                    if (!resourcePhases[key]) resourcePhases[key] = { roles: new Set(), phases: [] };
+                    resourcePhases[key].roles.add('dev');
+                    resourcePhases[key].phases.push({
+                        storyId: us.id, storyTitle: us.title || '',
+                        type: phase.type, start: phase.start, end: phase.end,
+                        prTitle: phase.prTitle, parallelTest: phase.parallelTest
+                    });
+                }
+            }
+
+            // --- Testing phases go to testerLead ---
+            if (isTesterPhase && us.testerLead) {
+                const key = String(us.testerLead).trim();
+                if (key) {
+                    if (!resourcePhases[key]) resourcePhases[key] = { roles: new Set(), phases: [] };
+                    resourcePhases[key].roles.add('tester');
+                    resourcePhases[key].phases.push({
+                        storyId: us.id, storyTitle: us.title || '',
+                        type: phase.type, start: phase.start, end: phase.end,
+                        prTitle: phase.prTitle, parallelTest: phase.parallelTest
+                    });
+                }
+            }
+
+            // --- Parallel testing during bug-fix also belongs to testerLead ---
+            if (phase.type === 'bugfix' && phase.parallelTest && us.testerLead) {
+                const key = String(us.testerLead).trim();
+                if (key) {
+                    if (!resourcePhases[key]) resourcePhases[key] = { roles: new Set(), phases: [] };
+                    resourcePhases[key].roles.add('tester');
+                    resourcePhases[key].phases.push({
+                        storyId: us.id, storyTitle: us.title || '',
+                        type: 'testing', start: phase.start, end: phase.end,
+                        parallelTest: true
+                    });
+                }
+            }
+        });
+    });
+
+    if (Object.keys(resourcePhases).length === 0 || minTime === Infinity) {
+        return `<div class="card" style="padding: 20px; margin-bottom: 30px; background: #fff8e1; border-left: 5px solid #ffc107;">
+            <b>📅 Team Timeline</b> is not available yet. Please load data via <b>"Fetch from Azure"</b>
+            so the state log and PRs can be retrieved for each story.
+        </div>`;
+    }
+
+    // ---- Detect overlaps per resource (same person on 2+ stories at same time) ----
+    Object.keys(resourcePhases).forEach(res => {
+        const data = resourcePhases[res];
+        for (let i = 0; i < data.phases.length; i++) {
+            for (let j = i + 1; j < data.phases.length; j++) {
+                const p1 = data.phases[i], p2 = data.phases[j];
+                if (String(p1.storyId) === String(p2.storyId)) continue;
+                const oStart = Math.max(new Date(p1.start).getTime(), new Date(p2.start).getTime());
+                const oEnd   = Math.min(new Date(p1.end).getTime(),   new Date(p2.end).getTime());
+                if (oEnd > oStart) totalOverlapCount++;
+            }
+        }
+    });
+
+    // ---- Sort resources: Devs first, then Testers, alphabetically ----
+    const sortedResources = Object.keys(resourcePhases).sort((a, b) => {
+        const aIsDev = resourcePhases[a].roles.has('dev') ? 0 : 1;
+        const bIsDev = resourcePhases[b].roles.has('dev') ? 0 : 1;
+        if (aIsDev !== bIsDev) return aIsDev - bIsDev;
+        return a.localeCompare(b);
+    });
+
+    const span     = Math.max(maxTime - minTime, 1);
+    const fmtShort = (d) => new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit' });
+    const fmtFull  = (d) => new Date(d).toLocaleString('en-GB', {
+        day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+    });
+
+    let rowsHTML = '';
+    sortedResources.forEach(resource => {
+        const data      = resourcePhases[resource];
+        const rolesList = Array.from(data.roles);
+        const isDev     = rolesList.includes('dev');
+        const isTester  = rolesList.includes('tester');
+
+        let roleBadge;
+        if (isDev && isTester) {
+            roleBadge = `<span style="background:#8e44ad;color:white;padding:2px 8px;border-radius:4px;font-size:0.7em;font-weight:600;">💻🧪 Dev + Tester</span>`;
+        } else if (isDev) {
+            roleBadge = `<span style="background:#3498db;color:white;padding:2px 8px;border-radius:4px;font-size:0.7em;font-weight:600;">💻 Developer</span>`;
+        } else {
+            roleBadge = `<span style="background:#2ecc71;color:white;padding:2px 8px;border-radius:4px;font-size:0.7em;font-weight:600;">🧪 Tester</span>`;
+        }
+
+        // Sort phases by start time
+        data.phases.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+        // Per-resource overlap count
+        let resourceOverlap = 0;
+        for (let i = 0; i < data.phases.length; i++) {
+            for (let j = i + 1; j < data.phases.length; j++) {
+                const p1 = data.phases[i], p2 = data.phases[j];
+                if (String(p1.storyId) === String(p2.storyId)) continue;
+                const oStart = Math.max(new Date(p1.start).getTime(), new Date(p2.start).getTime());
+                const oEnd   = Math.min(new Date(p1.end).getTime(),   new Date(p2.end).getTime());
+                if (oEnd > oStart) resourceOverlap++;
+            }
+        }
+
+        let segsHTML = '';
+        data.phases.forEach(phase => {
+            const pStart = new Date(phase.start).getTime();
+            const pEnd   = new Date(phase.end).getTime();
+            const left   = ((pStart - minTime) / span) * 100;
+            const width  = Math.max(((pEnd - pStart) / span) * 100, 0.3);
+            const color  = TIMELINE_COLORS[phase.type] || '#95a5a6';
+            const label  = TIMELINE_LABELS[phase.type] || phase.type;
+            const workingDays  = calcWorkingDays(phase.start, phase.end);
+            const workingHours = workingDays * 5;
+
+            const tipLines = [
+                label,
+                `Story #${phase.storyId}: ${phase.storyTitle}`,
+                `From: ${fmtFull(phase.start)}`,
+                `To:   ${fmtFull(phase.end)}`,
+                `Duration: ${workingDays} working day(s) = ${workingHours}h (5h/day)`
+            ];
+            if (phase.prTitle)      tipLines.push(`PR: ${phase.prTitle}`);
+            if (phase.parallelTest) tipLines.push(`⚡ Testing running in parallel`);
+
+            const tip = tipLines.join('\n');
+
+            segsHTML += `<div title="${tip.replace(/"/g, '&quot;')}" style="
+                position:absolute; top:0; bottom:0;
+                left:${left}%; width:${width}%;
+                background:${color}; border-radius:3px; cursor:pointer;
+                box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
+            "></div>`;
+        });
+
+        const overlapBadge = resourceOverlap > 0
+            ? `<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:4px;font-size:0.7em;font-weight:600;margin-left:6px;" title="This resource is working on multiple stories at the same time">⚠️ ${resourceOverlap} overlap</span>`
+            : '';
+
+        rowsHTML += `
+            <div style="display:flex;align-items:center;margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:8px;border:1px solid #e9ecef;">
+                <div style="min-width:230px;display:flex;flex-direction:column;gap:5px;">
+                    <div style="color:#2c3e50;font-weight:700;font-size:0.95em;">${resource}</div>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;">${roleBadge}${overlapBadge}</div>
+                </div>
+                <div style="flex:1;position:relative;height:34px;background:#e9ecef;border-radius:4px;overflow:hidden;margin-left:12px;">
+                    ${segsHTML}
+                </div>
+                <div style="min-width:80px;text-align:right;font-size:0.8em;color:#7f8c8d;margin-left:10px;">
+                    <b>${data.phases.length}</b> phase${data.phases.length !== 1 ? 's' : ''}
+                </div>
+            </div>`;
+    });
+
+    const rangeHTML = `
+        <div style="display:flex;justify-content:space-between;padding:8px 100px 8px 240px;font-size:0.85em;color:#7f8c8d;margin-top:5px;font-weight:600;">
+            <span>${fmtShort(minTime)}</span>
+            <span>${fmtShort(maxTime)}</span>
+        </div>`;
+
+    const usedTypes = [...new Set(Object.values(resourcePhases).flatMap(r => r.phases.map(p => p.type)))];
+    const legendHTML = usedTypes.map(t =>
+        `<span class="timeline-legend-item"><span class="legend-dot" style="background:${TIMELINE_COLORS[t] || '#95a5a6'};"></span>${TIMELINE_LABELS[t] || t}</span>`
+    ).join('');
+
+    const overlapBanner = totalOverlapCount > 0
+        ? `<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:10px 15px;margin-bottom:15px;border-radius:6px;font-size:0.9em;color:#856404;">
+             ⚠️ <b>Resource Overlap Detected:</b> ${totalOverlapCount} overlap(s) found where the same person is working on multiple stories simultaneously.
+           </div>`
+        : `<div style="background:#d4edda;border-left:4px solid #28a745;padding:10px 15px;margin-bottom:15px;border-radius:6px;font-size:0.9em;color:#155724;">
+             ✅ <b>No Resource Overlaps:</b> Each person is working on one story at a time.
+           </div>`;
+
+    return `
+        <div class="card" style="margin-bottom:35px;padding:25px;background:white;border-radius:12px;
+                    box-shadow:0 4px 20px rgba(0,0,0,0.08);border-top:4px solid #8e44ad;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <h3 style="color:#2c3e50;margin:0;font-size:1.3em;">📅 Consolidated Team Timeline</h3>
+                <span style="background:#f1f2f6;color:#2c3e50;padding:6px 14px;border-radius:20px;font-size:0.85em;font-weight:600;">
+                    ${sortedResources.length} Resources | ${processedStories.length} Stories
+                </span>
+            </div>
+            <p style="color:#7f8c8d;font-size:0.9em;margin:0 0 15px 0;">
+                Shows each resource's activity across all user stories. Hover over a bar to see story ID, phase, and duration.
+            </p>
+            ${overlapBanner}
+            <div style="margin-bottom:10px;">
+                ${rowsHTML}
+                ${rangeHTML}
+            </div>
+            <div class="timeline-legend" style="margin-top:15px;padding-top:15px;border-top:1px solid #e9ecef;">${legendHTML}</div>
+        </div>`;
+}
 
 function renderTeamView() {
     const container = document.getElementById('team-view');
@@ -2051,6 +2273,7 @@ function renderTeamView() {
 
     let html = `<div style="direction:ltr;text-align:left;font-family:'Segoe UI',sans-serif;padding:20px;">
         <h2 style="margin-bottom:30px;color:#2c3e50;border-left:6px solid #2ecc71;padding-left:20px;font-size:1.8em;">🚀 Team Performance Analytics (Unified QC & Review Scope)</h2>`;
+    ${renderTeamTimelineHTML()}`;
 
     for (let area in grouped) {
         let stats = {
