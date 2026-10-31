@@ -2272,7 +2272,7 @@ function renderTeamView() {
     }
 
     let html = `<div style="direction:ltr;text-align:left;font-family:'Segoe UI',sans-serif;padding:20px;">
-        <h2 style="margin-bottom:30px;color:#2c3e50;border-left:6px solid #2ecc71;padding-left:20px;font-size:1.8em;">🚀 Team Performance Analytics (Unified QC & Review Scope)</h2>`
+    <h2 style="margin-bottom:30px;color:#2c3e50;border-left:6px solid #2ecc71;padding-left:20px;font-size:1.8em;">🚀 Team Performance Analytics (Unified QC & Review Scope)</h2>
     ${renderTeamTimelineHTML()}`;
 
     for (let area in grouped) {
