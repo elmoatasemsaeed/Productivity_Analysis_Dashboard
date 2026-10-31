@@ -969,10 +969,6 @@ function renderIterationView() {
 //  RENDER STORY TIMELINE (Enhanced: 5h/day + Overlap Detection)
 // ============================================================
 
-/**
- * حساب عدد أيام العمل بين تاريخين (بدون جمع أو عطلات)
- * يُستخدم فقط لعرض مدة الـ phase في الـ tooltip.
- */
 function calcWorkingDays(start, end) {
     if (!start || !end) return 0;
     let s = new Date(start), e = new Date(end);
@@ -993,17 +989,6 @@ function calcWorkingDays(start, end) {
     return days;
 }
 
-/**
- * ⭐ Overlap Detection:
- * بيدور على كل الـ stories التانية اللي نفس الشخص (dev/tester) شغال عليها
- * في نفس الفترة الزمنية للـ phase الحالية.
- * 
- * بيرجع object:
- * {
- *   devOverlaps: [{ storyId, title, phaseType, phaseStart, phaseEnd }],
- *   testerOverlaps: [...]
- * }
- */
 function detectOverlaps(us, phase, allStories) {
     const result = { devOverlaps: [], testerOverlaps: [] };
     if (!allStories || allStories.length <= 1) return result;
@@ -1012,16 +997,8 @@ function detectOverlaps(us, phase, allStories) {
     const phaseEnd = new Date(phase.end).getTime();
     if (phaseEnd <= phaseStart) return result;
 
-    // تحديد الأدوار المرتبطة بالـ phase
-    // dev, review, bugfix => developer
-    // testing, senior-review => tester
-    const devPhaseTypes = ['dev', 'bugfix'];
-    const testerPhaseTypes = ['testing'];
-    // review / senior-review ممكن يكونوا dev أو tester حسب الـ meta، لكن للتبسيط:
-    // review => developer (اللي بيعمل code review)
-    // senior-review => tester (senior tester)
-    const isDevPhase = devPhaseTypes.includes(phase.type) || phase.type === 'review';
-    const isTesterPhase = testerPhaseTypes.includes(phase.type) || phase.type === 'senior-review';
+    const isDevPhase = ['dev', 'bugfix', 'review'].includes(phase.type);
+    const isTesterPhase = ['testing', 'senior-review'].includes(phase.type);
 
     allStories.forEach(other => {
         if (String(other.id) === String(us.id)) return;
@@ -1031,31 +1008,16 @@ function detectOverlaps(us, phase, allStories) {
         cached.timeline.forEach(otherPhase => {
             const oStart = new Date(otherPhase.start).getTime();
             const oEnd = new Date(otherPhase.end).getTime();
-            // تداخل زمني؟
             const hasOverlap = oStart < phaseEnd && oEnd > phaseStart;
             if (!hasOverlap) return;
 
-            // نفس الـ dev؟
             if (isDevPhase && other.devLead && us.devLead &&
                 String(other.devLead).trim().toLowerCase() === String(us.devLead).trim().toLowerCase()) {
-                result.devOverlaps.push({
-                    storyId: other.id,
-                    title: other.title,
-                    phaseType: otherPhase.type,
-                    phaseStart: otherPhase.start,
-                    phaseEnd: otherPhase.end
-                });
+                result.devOverlaps.push({ storyId: other.id, phaseType: otherPhase.type });
             }
-            // نفس الـ tester؟
             if (isTesterPhase && other.testerLead && us.testerLead &&
                 String(other.testerLead).trim().toLowerCase() === String(us.testerLead).trim().toLowerCase()) {
-                result.testerOverlaps.push({
-                    storyId: other.id,
-                    title: other.title,
-                    phaseType: otherPhase.type,
-                    phaseStart: otherPhase.start,
-                    phaseEnd: otherPhase.end
-                });
+                result.testerOverlaps.push({ storyId: other.id, phaseType: otherPhase.type });
             }
         });
     });
@@ -1081,65 +1043,49 @@ function renderTimelineHTML(us) {
     });
     const fmtShort = (d) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
 
-    // ─────────────────────────────────────────────────────────────
-    //  بناء الـ segments + الـ tooltip المعدل (5h/day + overlaps)
-    // ─────────────────────────────────────────────────────────────
     let segsHTML = '';
-    let totalOverlapCount = 0;
-    const allStoriesForOverlap = processedStories; // كل الـ stories المحملة
-
     timeline.forEach(phase => {
-        const left  = ((phase.start.getTime() - minTime) / span) * 100;
+        const left = ((phase.start.getTime() - minTime) / span) * 100;
         const width = Math.max(((phase.end.getTime() - phase.start.getTime()) / span) * 100, 0.6);
-
-        // ⭐ حساب المدة بطريقتين:
+        
         const workingDays = calcWorkingDays(phase.start, phase.end);
-        const workingHours = workingDays * 5;   // ⬅️ 5 ساعات لكل يوم عمل
+        const workingHours = workingDays * 5;
         const calendarDays = Math.max(0, Math.round((phase.end - phase.start) / (1000 * 60 * 60 * 24)));
-
+        
         const color = TIMELINE_COLORS[phase.type] || '#95a5a6';
         const label = TIMELINE_LABELS[phase.type] || phase.type;
-
-        // ⭐ Overlap detection
-        const overlaps = detectOverlaps(us, phase, allStoriesForOverlap);
-        totalOverlapCount += overlaps.devOverlaps.length + overlaps.testerOverlaps.length;
-
-        // بناء نص الـ tooltip
-        let tipLines = [];
-        tipLines.push(`${label}`);
-        tipLines.push(`From: ${fmt(phase.start)}`);
-        tipLines.push(`To:   ${fmt(phase.end)}`);
-        tipLines.push(`Duration: ${workingDays} working day${workingDays !== 1 ? 's' : ''} = ${workingHours} working hours (5h/day)`);
-        if (calendarDays > 0 && calendarDays !== workingDays) {
-            tipLines.push(`(Calendar span: ${calendarDays} day${calendarDays !== 1 ? 's' : ''})`);
-        }
+        
+        const overlaps = detectOverlaps(us, phase, processedStories);
+        const totalOverlaps = overlaps.devOverlaps.length + overlaps.testerOverlaps.length;
+        
+        let tipLines = [
+            `${label}`,
+            `From: ${fmt(phase.start)}`,
+            `To:   ${fmt(phase.end)}`,
+            `Duration: ${workingDays} working day${workingDays !== 1 ? 's' : ''} = ${workingHours} working hours (5h/day)`
+        ];
+        if (calendarDays > 0 && calendarDays !== workingDays) tipLines.push(`(Calendar span: ${calendarDays} days)`);
         if (phase.prTitle) tipLines.push(`PR: ${phase.prTitle}`);
         if (phase.parallelTest) tipLines.push(`⚡ Testing running in parallel`);
-
-        // ⭐ سطر الـ overlaps
-        if (overlaps.devOverlaps.length > 0) {
-            tipLines.push(`⚠️ Same Dev also working on:`);
-            overlaps.devOverlaps.forEach(o => {
-                tipLines.push(`   • Story #${o.storyId} (${TIMELINE_LABELS[o.phaseType] || o.phaseType})`);
-            });
-        }
-        if (overlaps.testerOverlaps.length > 0) {
-            tipLines.push(`⚠️ Same Tester also working on:`);
-            overlaps.testerOverlaps.forEach(o => {
-                tipLines.push(`   • Story #${o.storyId} (${TIMELINE_LABELS[o.phaseType] || o.phaseType})`);
-            });
+        
+        if (totalOverlaps > 0) {
+            tipLines.push(`⚠️ Overlaps with ${totalOverlaps} other story phase(s)`);
+            // نعرض أول 3 overlaps فقط في الـ tooltip عشان ميبقاش طويل جداً
+            const topDev = overlaps.devOverlaps.slice(0, 3).map(o => `#${o.storyId}`).join(', ');
+            const topTest = overlaps.testerOverlaps.slice(0, 3).map(o => `#${o.storyId}`).join(', ');
+            if (topDev) tipLines.push(`  Dev: ${topDev}${overlaps.devOverlaps.length > 3 ? '...' : ''}`);
+            if (topTest) tipLines.push(`  Tester: ${topTest}${overlaps.testerOverlaps.length > 3 ? '...' : ''}`);
         }
 
         const tip = tipLines.join('\n');
-
-        // ⭐ إضافة علامة تحذير بصرية على الـ segment لو فيه overlap
-        const hasOverlap = overlaps.devOverlaps.length > 0 || overlaps.testerOverlaps.length > 0;
-        const overlapMarker = hasOverlap
-            ? `<span style="position:absolute; top:-2px; right:-2px; background:#e74c3c; color:white; border-radius:50%; width:14px; height:14px; font-size:9px; line-height:14px; text-align:center; font-weight:bold; box-shadow:0 0 3px rgba(0,0,0,0.5);">!</span>`
+        
+        // ⭐ إصلاح: الحفاظ على الـ CSS الأصلي، إضافة علامة صغيرة فقط في الركن العلوي
+        const warningBadge = totalOverlaps > 0 
+            ? `<span style="position:absolute; top:1px; right:1px; background:#c0392b; color:white; border-radius:50%; width:12px; height:12px; font-size:8px; line-height:12px; text-align:center; font-weight:bold; z-index:2;">!</span>`
             : '';
-
-        segsHTML += `<div class="timeline-seg" style="left:${left}%; width:${width}%; background:${color}; position:relative;" title="${tip.replace(/"/g, '&quot;')}">
-            ${overlapMarker}
+            
+        segsHTML += `<div class="timeline-seg" style="left:${left}%; width:${width}%; background:${color};" title="${tip.replace(/"/g, '&quot;')}">
+            ${warningBadge}
         </div>`;
     });
 
@@ -1148,27 +1094,30 @@ function renderTimelineHTML(us) {
         `<span class="timeline-legend-item"><span class="legend-dot" style="background:${TIMELINE_COLORS[t] || '#95a5a6'};"></span>${TIMELINE_LABELS[t] || t}</span>`
     ).join('');
 
-    // ─────────────────────────────────────────────────────────────
-    //  تفاصيل كل phase تحت البار (بنفس المعادلة الجديدة)
-    // ─────────────────────────────────────────────────────────────
     const detailsHTML = timeline.map(phase => {
         const workingDays = calcWorkingDays(phase.start, phase.end);
         const workingHours = workingDays * 5;
         const color = TIMELINE_COLORS[phase.type] || '#95a5a6';
         const label = TIMELINE_LABELS[phase.type] || phase.type;
-
+        
         const overlaps = detectOverlaps(us, phase, processedStories);
-        const hasOverlap = overlaps.devOverlaps.length > 0 || overlaps.testerOverlaps.length > 0;
-
-        let overlapBadges = '';
-        if (hasOverlap) {
-            const devBadges = overlaps.devOverlaps.map(o =>
-                `<span style="display:inline-block; background:#fdecea; color:#c0392b; border:1px solid #e74c3c; border-radius:10px; padding:1px 7px; font-size:0.75em; margin-left:4px;">👨‍💻 #${o.storyId}</span>`
-            ).join('');
-            const testBadges = overlaps.testerOverlaps.map(o =>
-                `<span style="display:inline-block; background:#fff4e5; color:#b9770e; border:1px solid #e67e22; border-radius:10px; padding:1px 7px; font-size:0.75em; margin-left:4px;">🧪 #${o.storyId}</span>`
-            ).join('');
-            overlapBadges = `<span style="margin-left:8px; font-size:0.8em; color:#c0392b; font-weight:600;">⚠️ Overlap:</span>${devBadges}${testBadges}`;
+        let overlapText = '';
+        const total = overlaps.devOverlaps.length + overlaps.testerOverlaps.length;
+        
+        if (total > 0) {
+            // نجمع كل الـ IDs عشان نعرضها بشكل مختصر
+            const allIds = [...new Set([
+                ...overlaps.devOverlaps.map(o => o.storyId),
+                ...overlaps.testerOverlaps.map(o => o.storyId)
+            ])];
+            
+            // لو عددهم كبير، نعرض أول 4 وأيقونة "+X"
+            const shown = allIds.slice(0, 4).map(id => `#${id}`).join(', ');
+            const extra = allIds.length > 4 ? ` +${allIds.length - 4} more` : '';
+            
+            overlapText = `<span style="margin-left:8px; color:#c0392b; font-size:0.85em; font-weight:600;" title="Overlapping with stories: ${allIds.map(i=>'#'+i).join(', ')}">
+                ⚠️ Overlap: <b>${shown}</b>${extra}
+            </span>`;
         }
 
         return `<div class="timeline-detail-row">
@@ -1178,16 +1127,19 @@ function renderTimelineHTML(us) {
             <span style="color:#7f8c8d;">(${workingDays} day${workingDays !== 1 ? 's' : ''} = <b>${workingHours}h</b> @5h/day)</span>
             ${phase.prTitle ? `<span style="color:#8e44ad;font-style:italic;">🔀 ${phase.prTitle}</span>` : ''}
             ${phase.parallelTest ? `<span style="color:#e67e22;font-size:0.9em;">⚡ Testing in parallel</span>` : ''}
-            ${overlapBadges}
+            ${overlapText}
         </div>`;
     }).join('');
 
-    // ─────────────────────────────────────────────────────────────
-    //  بانر تحذيري لو فيه overlap في الـ story كلها
-    // ─────────────────────────────────────────────────────────────
+    // بانر تحذيري بسيط فوق البار
+    const totalOverlapCount = timeline.reduce((acc, phase) => {
+        const ov = detectOverlaps(us, phase, processedStories);
+        return acc + ov.devOverlaps.length + ov.testerOverlaps.length;
+    }, 0);
+    
     const overlapWarningBanner = totalOverlapCount > 0
-        ? `<div style="background:#fff3cd; border-left:4px solid #ffc107; padding:8px 12px; margin-bottom:10px; border-radius:4px; font-size:0.85em; color:#856404;">
-            ⚠️ <b>Resource Overlap Detected:</b> This story has <b>${totalOverlapCount}</b> overlapping phase(s) with other stories assigned to the same Dev/Tester.
+        ? `<div style="background:#fff3cd; border-left:4px solid #ffc107; padding:6px 12px; margin-bottom:8px; border-radius:4px; font-size:0.85em; color:#856404;">
+            ⚠️ <b>Resource Overlap:</b> This story has <b>${totalOverlapCount}</b> overlapping phase(s) with other stories (same Dev/Tester).
            </div>`
         : '';
 
