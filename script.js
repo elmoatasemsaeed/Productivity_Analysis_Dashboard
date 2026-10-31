@@ -105,6 +105,80 @@ async function fetchStoryRevisions(storyId, org, project) {
     return data.value || [];
 }
 
+// ============================================================
+//  UPLOAD rawData TO GITHUB (data.json)
+// ============================================================
+async function uploadDataToGitHub() {
+    if (!githubToken) {
+        alert("Please login with a valid GitHub token");
+        return false;
+    }
+    if (!rawData || rawData.length === 0) {
+        alert("No data to upload. Please fetch from Azure first.");
+        return false;
+    }
+
+    const statusDiv = document.getElementById('sync-status');
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.innerText = "⏳ Uploading data to GitHub...";
+    }
+
+    try {
+        // 1. جلب SHA إذا كان الملف موجوداً
+        let sha = null;
+        const getRes = await fetch(
+            `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}?ref=${GH_CONFIG.branch}`,
+            { headers: { 'Authorization': `token ${githubToken}` } }
+        );
+        if (getRes.ok) {
+            const meta = await getRes.json();
+            sha = meta.sha;
+        } else if (getRes.status !== 404) {
+            throw new Error(`GitHub GET failed: ${getRes.status}`);
+        }
+
+        // 2. ترميز المحتوى (يدعم UTF-8 بشكل صحيح)
+        const jsonStr = JSON.stringify(rawData, null, 2);
+        const content = btoa(unescape(encodeURIComponent(jsonStr)));
+
+        const body = {
+            message: `Update data.json - ${new Date().toISOString()}`,
+            content: content,
+            branch: GH_CONFIG.branch
+        };
+        if (sha) body.sha = sha;
+
+        // 3. رفع الملف
+        const putRes = await fetch(
+            `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            }
+        );
+
+        if (!putRes.ok) {
+            const errText = await putRes.text();
+            throw new Error(`GitHub PUT failed: ${putRes.status} - ${errText}`);
+        }
+
+        if (statusDiv) {
+            statusDiv.innerText = `✅ Uploaded ${rawData.length} records to GitHub (data.json)`;
+        }
+        return true;
+
+    } catch (e) {
+        console.error("Upload error:", e);
+        if (statusDiv) statusDiv.innerText = "❌ Upload failed: " + e.message;
+        return false;
+    }
+}
+
 async function fetchStoryPRs(storyId, org, project) {
     const pat = localStorage.getItem('azure_pat');
     if (!pat) return [];
@@ -2779,22 +2853,41 @@ function updateIterationDropdown() {
 async function fetchFromAzure() {
     const select = document.getElementById('azureIterationSelect');
     if (!select || select.value === "") return alert("Please select a query");
+
     const config = JSON.parse(select.value);
     const pat = localStorage.getItem('azure_pat');
     const statusDiv = document.getElementById('sync-status');
+
     if (!pat) return alert("Please enter Azure PAT in login screen");
+    if (!githubToken) return alert("Please login with a valid GitHub token first (required to save data)");
+
     statusDiv.style.display = 'block';
     statusDiv.innerText = "⏳ Connecting to Azure DevOps...";
+
     try {
         const authHeader = { 'Authorization': 'Basic ' + btoa(':' + pat) };
+
+        // ── 1. WIQL Query ──────────────────────────────────────
         const wiqlUrl = `https://dev.azure.com/${config.org}/${config.project}/_apis/wit/wiql/${config.id}?api-version=6.0`;
         const wiqlRes = await fetch(wiqlUrl, { headers: authHeader });
         if (!wiqlRes.ok) throw new Error(`WIQL error: ${wiqlRes.status}`);
+
         const wiqlData = await wiqlRes.json();
         let workItemIds = [];
-        if (wiqlData.workItemRelations) workItemIds = wiqlData.workItemRelations.map(rel => rel.target ? rel.target.id : null).filter(id => id !== null);
-        else workItemIds = wiqlData.workItems.map(wi => wi.id);
-        if (workItemIds.length === 0) { statusDiv.innerText = "⚠️ No results from query."; return; }
+        if (wiqlData.workItemRelations) {
+            workItemIds = wiqlData.workItemRelations
+                .map(rel => rel.target ? rel.target.id : null)
+                .filter(id => id !== null);
+        } else {
+            workItemIds = wiqlData.workItems.map(wi => wi.id);
+        }
+
+        if (workItemIds.length === 0) {
+            statusDiv.innerText = "⚠️ No results from query.";
+            return;
+        }
+
+        // ── 2. Fetch Work Item Details (batches of 200) ────────
         statusDiv.innerText = `⏳ Found ${workItemIds.length} items, fetching details...`;
         let allItemsDetails = [];
         for (let i = 0; i < workItemIds.length; i += 200) {
@@ -2805,13 +2898,27 @@ async function fetchFromAzure() {
             allItemsDetails = allItemsDetails.concat(detailsData.value);
             statusDiv.innerText = `⏳ Loading: ${allItemsDetails.length} / ${workItemIds.length}`;
         }
+
+        // ── 3. Map & Process ───────────────────────────────────
         rawData = allItemsDetails.map(item => mapAzureFields(item));
         processData();
-        // NEW: Build timelines (state log + PRs) for each story
+
+        // ── 4. Build timelines (state log + PRs) ───────────────
         statusDiv.innerText = "⏳ Building timelines from Azure state log & PRs...";
         await fetchAndBuildTimelinesForStories(config.org, config.project, statusDiv);
-        statusDiv.innerText = "✅ Data fetched successfully (with timelines)";
+
+        // ── 5. ✅ Upload rawData to GitHub (data.json) ─────────
+        statusDiv.innerText = "⏳ Saving data to GitHub (data.json)...";
+        const uploaded = await uploadDataToGitHub();
+
+        if (uploaded) {
+            statusDiv.innerText = `✅ Data fetched & saved successfully — ${rawData.length} records (with timelines)`;
+        } else {
+            statusDiv.innerText = "⚠️ Data fetched successfully but FAILED to upload to GitHub. Use the 'Upload Data to GitHub' button to retry.";
+        }
+
         showView('iteration-view');
+
     } catch (error) {
         console.error("Azure Integration Error:", error);
         statusDiv.innerText = "❌ Fetch failed: " + error.message;
