@@ -6258,6 +6258,27 @@
     "BugType": ""
   },
   {
+    "ID": 196133,
+    "Work Item Type": "Meeting",
+    "State": "Closed",
+    "Title": "Investigation in retry action in action center",
+    "Assigned To": "Fatma Fayed",
+    "Activity": "",
+    "Original Estimation": 0,
+    "TimeSheet_DevActualTime": 0.5,
+    "TimeSheet_TestingActualTime": 0,
+    "Activated Date": "",
+    "Business Area": "General",
+    "Iteration Path": "LDM\\Registration Team\\2026\\Registration-October 4-24",
+    "CustomResolvedDate": "",
+    "Tested Date": "",
+    "Assigned To Tester": "",
+    "Resolved Date": "",
+    "Severity": "",
+    "GenericBug": "No",
+    "BugType": ""
+  },
+  {
     "ID": 185206,
     "Work Item Type": "Task",
     "State": "Closed",
@@ -9831,6 +9852,27 @@
     "BugType": ""
   },
   {
+    "ID": 195841,
+    "Work Item Type": "Support log",
+    "State": "Tested",
+    "Title": "# Alameda >> Publish live  (192924 ,191777)",
+    "Assigned To": "Ahmed Gamal",
+    "Activity": "",
+    "Original Estimation": 2,
+    "TimeSheet_DevActualTime": 5.5,
+    "TimeSheet_TestingActualTime": 5.5,
+    "Activated Date": "2026-11-01T12:15:08.847Z",
+    "Business Area": "Internal lab",
+    "Iteration Path": "LDM",
+    "CustomResolvedDate": "2026-11-03T13:37:00.863Z",
+    "Tested Date": "2026-11-03T18:07:23.91Z",
+    "Assigned To Tester": "",
+    "Resolved Date": "",
+    "Severity": "2 - High",
+    "GenericBug": "No",
+    "BugType": ""
+  },
+  {
     "ID": 190995,
     "Work Item Type": "Task",
     "State": "Closed",
@@ -12349,7 +12391,7 @@
     "Assigned To": "Fatma Fayed",
     "Activity": "Development",
     "Original Estimation": 3,
-    "TimeSheet_DevActualTime": 3.5,
+    "TimeSheet_DevActualTime": 3.67,
     "TimeSheet_TestingActualTime": 0,
     "Activated Date": "2026-10-22T13:03:39.19Z",
     "Business Area": "General",
@@ -16323,7 +16365,7 @@
   {
     "ID": 186378,
     "Work Item Type": "Meeting",
-    "State": "Active",
+    "State": "Closed",
     "Title": "Meeting",
     "Assigned To": "Ola Gamal",
     "Activity": "",
@@ -16365,7 +16407,7 @@
   {
     "ID": 187154,
     "Work Item Type": "Meeting",
-    "State": "Active",
+    "State": "Closed",
     "Title": "Meeting with DB",
     "Assigned To": "Ola Gamal",
     "Activity": "",
@@ -16428,7 +16470,7 @@
   {
     "ID": 194244,
     "Work Item Type": "Meeting",
-    "State": "Active",
+    "State": "Closed",
     "Title": "Pending on DB",
     "Assigned To": "Ola Gamal",
     "Activity": "",
@@ -16449,7 +16491,7 @@
   {
     "ID": 194245,
     "Work Item Type": "Meeting",
-    "State": "Active",
+    "State": "Closed",
     "Title": "pending on tester",
     "Assigned To": "Ola Gamal",
     "Activity": "",
@@ -16478,6 +16520,48 @@
     "TimeSheet_DevActualTime": 0,
     "TimeSheet_TestingActualTime": 0,
     "Activated Date": "",
+    "Business Area": "General",
+    "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
+    "CustomResolvedDate": "",
+    "Tested Date": "",
+    "Assigned To Tester": "",
+    "Resolved Date": "",
+    "Severity": "",
+    "GenericBug": "No",
+    "BugType": ""
+  },
+  {
+    "ID": 193818,
+    "Work Item Type": "Non Conformance",
+    "State": "To Be Reviewed",
+    "Title": "dev review",
+    "Assigned To": "Mohamed Salah-Eddin",
+    "Activity": "Development",
+    "Original Estimation": 0,
+    "TimeSheet_DevActualTime": 0,
+    "TimeSheet_TestingActualTime": 0,
+    "Activated Date": "",
+    "Business Area": "General",
+    "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
+    "CustomResolvedDate": "",
+    "Tested Date": "",
+    "Assigned To Tester": "",
+    "Resolved Date": "2026-11-05T13:53:22.51Z",
+    "Severity": "",
+    "GenericBug": "No",
+    "BugType": ""
+  },
+  {
+    "ID": 193820,
+    "Work Item Type": "Non Conformance",
+    "State": "Active",
+    "Title": "Rework estimation",
+    "Assigned To": "Mohamed Salah-Eddin",
+    "Activity": "Development",
+    "Original Estimation": 0,
+    "TimeSheet_DevActualTime": 0,
+    "TimeSheet_TestingActualTime": 0,
+    "Activated Date": "2026-11-05T13:44:09.937Z",
     "Business Area": "General",
     "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
     "CustomResolvedDate": "",
@@ -16533,7 +16617,7 @@
   {
     "ID": 186379,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR013 -> Add new header and footer images that follow leveling system",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16550,13 +16634,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-03T08:33:00.000Z",
-    "expectedEnd": "2026-09-03T09:03:00.000Z"
+    "expectedStart": "2026-09-03T08:03:00.000Z",
+    "expectedEnd": "2026-09-03T08:33:00.000Z"
   },
   {
     "ID": 186380,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR013 -> Add analyer images besides results grid at CBC",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16573,13 +16657,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-03T09:03:00.000Z",
-    "expectedEnd": "2026-09-03T11:03:00.000Z"
+    "expectedStart": "2026-09-03T08:33:00.000Z",
+    "expectedEnd": "2026-09-03T10:33:00.000Z"
   },
   {
     "ID": 186381,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR013 -> Add new results grid at CBC",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16596,13 +16680,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-03T11:03:00.000Z",
-    "expectedEnd": "2026-09-03T13:03:00.000Z"
+    "expectedStart": "2026-09-03T10:33:00.000Z",
+    "expectedEnd": "2026-09-03T12:33:00.000Z"
   },
   {
     "ID": 186382,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR006 -> Edit reports layout after new modifications",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16619,31 +16703,31 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-06T08:48:00.000Z",
-    "expectedEnd": "2026-09-06T10:48:00.000Z"
+    "expectedStart": "2026-09-06T08:18:00.000Z",
+    "expectedEnd": "2026-09-06T10:18:00.000Z"
   },
   {
     "ID": 186384,
     "Work Item Type": "Task",
-    "State": "New",
+    "State": "To Be Reviewed",
     "Title": "TR013 -> Add new section for all comments after results grid",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
-    "Original Estimation": 0,
+    "Original Estimation": 1,
     "TimeSheet_DevActualTime": 1,
     "TimeSheet_TestingActualTime": 0,
-    "Activated Date": "",
+    "Activated Date": "2026-11-05T14:33:59.03Z",
     "Business Area": "General",
     "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
-    "Resolved Date": "",
+    "Resolved Date": "2026-11-05T14:34:04.777Z",
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-02T13:03:59.940Z",
-    "expectedEnd": "2026-09-02T13:03:59.940Z"
+    "expectedStart": "2026-09-07T08:33:00.000Z",
+    "expectedEnd": "2026-09-07T09:33:00.000Z"
   },
   {
     "ID": 186427,
@@ -16688,8 +16772,8 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-09T08:52:21.070Z",
-    "expectedEnd": "2026-09-14T08:52:00.000Z"
+    "expectedStart": "2026-11-05T14:34:04.777Z",
+    "expectedEnd": "2026-11-10T14:34:00.000Z"
   },
   {
     "ID": 186435,
@@ -16711,13 +16795,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-03T13:03:00.000Z",
-    "expectedEnd": "2026-09-06T07:03:00.000Z"
+    "expectedStart": "2026-09-03T12:33:00.000Z",
+    "expectedEnd": "2026-09-06T06:33:00.000Z"
   },
   {
     "ID": 187090,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR006 -> Edit header layout",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16734,13 +16818,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-06T07:03:00.000Z",
-    "expectedEnd": "2026-09-06T08:48:00.000Z"
+    "expectedStart": "2026-09-06T06:33:00.000Z",
+    "expectedEnd": "2026-09-06T08:18:00.000Z"
   },
   {
     "ID": 187092,
     "Work Item Type": "Task",
-    "State": "New",
+    "State": "Closed",
     "Title": "TR012 -> Create new report for PCR",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16763,7 +16847,7 @@
   {
     "ID": 187093,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR012 -> Create new report for Electrophoresis",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16780,20 +16864,20 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-06T10:48:00.000Z",
-    "expectedEnd": "2026-09-06T12:48:00.000Z"
+    "expectedStart": "2026-09-06T10:18:00.000Z",
+    "expectedEnd": "2026-09-06T12:18:00.000Z"
   },
   {
     "ID": 187095,
     "Work Item Type": "Task",
-    "State": "New",
+    "State": "Active",
     "Title": "TR013 -> Display # and label at comment section when result is rerun",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
     "Original Estimation": 0.5,
     "TimeSheet_DevActualTime": 0,
     "TimeSheet_TestingActualTime": 0,
-    "Activated Date": "",
+    "Activated Date": "2026-11-05T14:34:50.99Z",
     "Business Area": "General",
     "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
     "CustomResolvedDate": "",
@@ -16803,13 +16887,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-03T08:03:00.000Z",
-    "expectedEnd": "2026-09-03T08:33:00.000Z"
+    "expectedStart": "2026-09-07T09:33:00.000Z",
+    "expectedEnd": "2026-09-07T10:03:00.000Z"
   },
   {
     "ID": 187096,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR014 -> Bind data from DB",
     "Assigned To": "Ola Gamal",
     "Activity": "Development",
@@ -16826,8 +16910,8 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-06T12:48:00.000Z",
-    "expectedEnd": "2026-09-07T07:18:00.000Z"
+    "expectedStart": "2026-09-06T12:18:00.000Z",
+    "expectedEnd": "2026-09-07T06:48:00.000Z"
   },
   {
     "ID": 188154,
@@ -16849,8 +16933,8 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-14T08:52:00.000Z",
-    "expectedEnd": "2026-09-14T09:52:00.000Z"
+    "expectedStart": "2026-11-10T14:34:00.000Z",
+    "expectedEnd": "2026-11-11T07:34:00.000Z"
   },
   {
     "ID": 188209,
@@ -16872,13 +16956,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-14T09:52:00.000Z",
-    "expectedEnd": "2026-09-14T09:58:00.000Z"
+    "expectedStart": "2026-11-11T07:34:00.000Z",
+    "expectedEnd": "2026-11-11T07:40:00.000Z"
   },
   {
     "ID": 192440,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "TR015 => Review on CR",
     "Assigned To": "Mohamed Salah-Eddin",
     "Activity": "Development",
@@ -16895,8 +16979,8 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-09-07T07:18:00.000Z",
-    "expectedEnd": "2026-09-07T09:03:00.000Z"
+    "expectedStart": "2026-09-07T06:48:00.000Z",
+    "expectedEnd": "2026-09-07T08:33:00.000Z"
   },
   {
     "ID": 186430,
@@ -18526,7 +18610,7 @@
     "TimeSheet_TestingActualTime": 0,
     "Activated Date": "2026-10-05T08:47:17.93Z",
     "Business Area": "General",
-    "Iteration Path": "LDM\\Candidate CRs",
+    "Iteration Path": "LDM",
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
@@ -18601,7 +18685,7 @@
   {
     "ID": 193818,
     "Work Item Type": "Non Conformance",
-    "State": "New",
+    "State": "To Be Reviewed",
     "Title": "dev review",
     "Assigned To": "Mohamed Salah-Eddin",
     "Activity": "Development",
@@ -18614,7 +18698,7 @@
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
-    "Resolved Date": "",
+    "Resolved Date": "2026-11-05T13:53:22.51Z",
     "Severity": "",
     "GenericBug": "No",
     "BugType": ""
@@ -28053,7 +28137,7 @@
   {
     "ID": 189080,
     "Work Item Type": "Meeting",
-    "State": "Active",
+    "State": "Closed",
     "Title": "Meeting with DB and Tester",
     "Assigned To": "Ola Gamal",
     "Activity": "",
@@ -28074,7 +28158,7 @@
   {
     "ID": 189651,
     "Work Item Type": "Meeting",
-    "State": "Active",
+    "State": "Closed",
     "Title": "DB and Testers Meetings",
     "Assigned To": "Mohamed Hany",
     "Activity": "",
@@ -28158,7 +28242,7 @@
   {
     "ID": 193818,
     "Work Item Type": "Non Conformance",
-    "State": "New",
+    "State": "To Be Reviewed",
     "Title": "dev review",
     "Assigned To": "Mohamed Salah-Eddin",
     "Activity": "Development",
@@ -28171,7 +28255,7 @@
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
-    "Resolved Date": "",
+    "Resolved Date": "2026-11-05T13:53:22.51Z",
     "Severity": "",
     "GenericBug": "No",
     "BugType": ""
@@ -28200,14 +28284,14 @@
   {
     "ID": 193820,
     "Work Item Type": "Non Conformance",
-    "State": "New",
+    "State": "Active",
     "Title": "Rework estimation",
     "Assigned To": "Mohamed Salah-Eddin",
     "Activity": "Development",
     "Original Estimation": 0,
     "TimeSheet_DevActualTime": 0,
     "TimeSheet_TestingActualTime": 0,
-    "Activated Date": "",
+    "Activated Date": "2026-11-05T13:44:09.937Z",
     "Business Area": "General",
     "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
     "CustomResolvedDate": "",
@@ -31018,7 +31102,7 @@
     "TimeSheet_TestingActualTime": 0,
     "Activated Date": "2026-10-05T08:47:17.93Z",
     "Business Area": "General",
-    "Iteration Path": "LDM\\Candidate CRs",
+    "Iteration Path": "LDM",
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
@@ -31030,7 +31114,7 @@
   {
     "ID": 193733,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "Preparation",
     "Assigned To": "Esraa Abd El Salam",
     "Activity": "Development",
@@ -31055,28 +31139,28 @@
     "Work Item Type": "Task",
     "State": "Closed",
     "Title": "DB: Fix value in SAJA_REPORTS_PKG.SP_REPORTING_PATIENTHEADER",
-    "Assigned To": "Ahmed Attia",
+    "Assigned To": "Moamen SalahElDeen",
     "Activity": "DB Modification",
     "Original Estimation": 0.5,
     "TimeSheet_DevActualTime": 1.5,
     "TimeSheet_TestingActualTime": 0,
-    "Activated Date": "2026-10-20T13:11:09.37Z",
+    "Activated Date": "2026-11-02T13:28:16.233Z",
     "Business Area": "General",
     "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
-    "Resolved Date": "2026-10-20T13:39:22.627Z",
+    "Resolved Date": "2026-11-02T13:43:15.747Z",
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-22T06:24:00.000Z",
-    "expectedEnd": "2026-10-22T06:54:00.000Z"
+    "expectedStart": "2026-10-22T13:39:00.000Z",
+    "expectedEnd": "2026-10-25T06:09:00.000Z"
   },
   {
     "ID": 193756,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR012 --> Copy Arabic headers and footer from Elshamel for reports and cover page",
     "Assigned To": "Esraa Abd El Salam",
     "Activity": "Development",
@@ -31093,13 +31177,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-22T06:54:00.000Z",
-    "expectedEnd": "2026-10-22T07:24:00.000Z"
+    "expectedStart": "2026-10-22T06:24:00.000Z",
+    "expectedEnd": "2026-10-22T06:54:00.000Z"
   },
   {
     "ID": 193757,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR012 --> Copy English headers and footer from Elshamel for reports and cover page",
     "Assigned To": "Esraa Abd El Salam",
     "Activity": "Development",
@@ -31116,13 +31200,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-22T07:24:00.000Z",
-    "expectedEnd": "2026-10-22T07:39:00.000Z"
+    "expectedStart": "2026-10-22T06:54:00.000Z",
+    "expectedEnd": "2026-10-22T07:09:00.000Z"
   },
   {
     "ID": 193758,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR013 --> Add Saja header same as normal reports in Arabic and English headers",
     "Assigned To": "Esraa Abd El Salam",
     "Activity": "Development",
@@ -31139,13 +31223,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-22T07:39:00.000Z",
-    "expectedEnd": "2026-10-22T08:39:00.000Z"
+    "expectedStart": "2026-10-22T07:09:00.000Z",
+    "expectedEnd": "2026-10-22T08:09:00.000Z"
   },
   {
     "ID": 193759,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR013 --> Add Saja footer data same as normal reports in Arabic and English footers",
     "Assigned To": "Esraa Abd El Salam",
     "Activity": "Development",
@@ -31162,13 +31246,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-22T08:39:00.000Z",
-    "expectedEnd": "2026-10-22T10:09:00.000Z"
+    "expectedStart": "2026-10-22T08:09:00.000Z",
+    "expectedEnd": "2026-10-22T09:39:00.000Z"
   },
   {
     "ID": 193760,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR014 --> Bind new data to headers and footers",
     "Assigned To": "Esraa Abd El Salam",
     "Activity": "Development",
@@ -31185,13 +31269,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-22T10:09:00.000Z",
-    "expectedEnd": "2026-10-22T12:09:00.000Z"
+    "expectedStart": "2026-10-22T09:39:00.000Z",
+    "expectedEnd": "2026-10-22T11:39:00.000Z"
   },
   {
     "ID": 194008,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR014 --> Centralize report procedures and parameters",
     "Assigned To": "Esraa Abd El Salam",
     "Activity": "Development",
@@ -31208,13 +31292,13 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-22T12:09:00.000Z",
-    "expectedEnd": "2026-10-25T06:09:00.000Z"
+    "expectedStart": "2026-10-22T11:39:00.000Z",
+    "expectedEnd": "2026-10-22T13:39:00.000Z"
   },
   {
     "ID": 194357,
     "Work Item Type": "Task",
-    "State": "New",
+    "State": "Closed",
     "Title": "TR015 => Review on CR",
     "Assigned To": "Mohamed Salah-Eddin",
     "Activity": "Development",
@@ -31260,13 +31344,13 @@
   {
     "ID": 195135,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "Execution",
     "Assigned To": "Yasmine Fouad",
     "Activity": "Testing",
     "Original Estimation": 10,
     "TimeSheet_DevActualTime": 0,
-    "TimeSheet_TestingActualTime": 0,
+    "TimeSheet_TestingActualTime": 3,
     "Activated Date": "2026-10-29T18:50:37.673Z",
     "Business Area": "General",
     "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
@@ -31277,8 +31361,8 @@
     "Severity": "",
     "GenericBug": "No",
     "BugType": "",
-    "expectedStart": "2026-10-21T13:23:38.283Z",
-    "expectedEnd": "2026-10-25T07:23:00.000Z"
+    "expectedStart": "2026-11-02T13:43:15.747Z",
+    "expectedEnd": "2026-11-04T07:43:00.000Z"
   },
   {
     "ID": 195136,
@@ -35994,7 +36078,7 @@
   {
     "ID": 193818,
     "Work Item Type": "Non Conformance",
-    "State": "New",
+    "State": "To Be Reviewed",
     "Title": "dev review",
     "Assigned To": "Mohamed Salah-Eddin",
     "Activity": "Development",
@@ -36007,7 +36091,7 @@
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
-    "Resolved Date": "",
+    "Resolved Date": "2026-11-05T13:53:22.51Z",
     "Severity": "",
     "GenericBug": "No",
     "BugType": ""
@@ -36949,7 +37033,7 @@
     "TimeSheet_TestingActualTime": 0,
     "Activated Date": "2026-10-05T08:47:17.93Z",
     "Business Area": "General",
-    "Iteration Path": "LDM\\Candidate CRs",
+    "Iteration Path": "LDM",
     "CustomResolvedDate": "",
     "Tested Date": "",
     "Assigned To Tester": "",
@@ -39772,14 +39856,14 @@
   {
     "ID": 193820,
     "Work Item Type": "Non Conformance",
-    "State": "New",
+    "State": "Active",
     "Title": "Rework estimation",
     "Assigned To": "Mohamed Salah-Eddin",
     "Activity": "Development",
     "Original Estimation": 0,
     "TimeSheet_DevActualTime": 0,
     "TimeSheet_TestingActualTime": 0,
-    "Activated Date": "",
+    "Activated Date": "2026-11-05T13:44:09.937Z",
     "Business Area": "General",
     "Iteration Path": "LDM\\InternalLab Team\\2026\\InternalLab-October 4-24",
     "CustomResolvedDate": "",
@@ -47246,7 +47330,7 @@
   {
     "ID": 193745,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR012 | Copy Eden_Form18",
     "Assigned To": "mohamed.abdelghany",
     "Activity": "Development",
@@ -47269,7 +47353,7 @@
   {
     "ID": 193746,
     "Work Item Type": "Task",
-    "State": "To Be Reviewed",
+    "State": "Closed",
     "Title": "TR014 | Update Form 18 Report Labels for Eden Lab",
     "Assigned To": "mohamed.abdelghany",
     "Activity": "Development",
@@ -47292,7 +47376,7 @@
   {
     "ID": 194177,
     "Work Item Type": "Task",
-    "State": "Active",
+    "State": "Closed",
     "Title": "BD016>Review on CR",
     "Assigned To": "gamal kasem",
     "Activity": "Development",
@@ -48100,7 +48184,7 @@
   {
     "ID": 194264,
     "Work Item Type": "Meeting",
-    "State": "Active",
+    "State": "Closed",
     "Title": "Discussion Meeting and Follow up with tester about merge issue",
     "Assigned To": "mohamed.abdelghany",
     "Activity": "",
