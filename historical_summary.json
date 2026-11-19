@@ -1792,7 +1792,7 @@
     "testerCount": 11,
     "dbCount": 2,
     "devNames": [
-      "Mohamed Ahmed",
+      "Mohammed Hashem",
       "Fatma Fayed",
       "Mahmoud Essam",
       "Samir Mohamed",
@@ -1866,7 +1866,7 @@
         "testerCount": 2,
         "dbCount": 1,
         "devNames": [
-          "Mohamed Ahmed",
+          "Mohammed Hashem",
           "Fatma Fayed",
           "Mahmoud Essam",
           "Samir Mohamed",
@@ -2029,7 +2029,7 @@
     "testerCount": 11,
     "dbCount": 2,
     "devNames": [
-      "Mohamed Ahmed",
+      "Mohammed Hashem",
       "Fatma Fayed",
       "Ahmed Mohamed",
       "Mahmoud Essam",
@@ -2102,7 +2102,7 @@
         "testerCount": 4,
         "dbCount": 2,
         "devNames": [
-          "Mohamed Ahmed",
+          "Mohammed Hashem",
           "Fatma Fayed",
           "Ahmed Mohamed",
           "Mahmoud Essam",
@@ -2261,7 +2261,7 @@
     "testerCount": 11,
     "dbCount": 4,
     "devNames": [
-      "Mohamed Ahmed",
+      "Mohammed Hashem",
       "Fatma Fayed",
       "Mahmoud Essam",
       "Samir Mohamed",
@@ -2338,7 +2338,7 @@
         "testerCount": 3,
         "dbCount": 3,
         "devNames": [
-          "Mohamed Ahmed",
+          "Mohammed Hashem",
           "Fatma Fayed",
           "Mahmoud Essam",
           "Samir Mohamed",
@@ -2757,7 +2757,7 @@
       "Ibrahim Ahmed",
       "Ahmed Gamal",
       "Samir Mohamed",
-      "Mohamed Ahmed",
+      "Mohammed Hashem",
       "mostafa kamel",
       "Mostafa Mamdouh",
       "Mohamed Hany",
@@ -2834,7 +2834,7 @@
           "Ibrahim Ahmed",
           "Ahmed Gamal",
           "Samir Mohamed",
-          "Mohamed Ahmed",
+          "Mohammed Hashem",
           "mostafa kamel",
           "Mostafa Mamdouh"
         ],
@@ -3190,233 +3190,6 @@
     ]
   },
   {
-    "iterationName": "August 2-22",
-    "totalStories": 11,
-    "completedStories": 11,
-    "avgCycleTime": 13.3,
-    "effortVariance": -24.8,
-    "dre": 93.5,
-    "internalBugs": 43,
-    "uatBugs": 3,
-    "totalDevActual": 231.6,
-    "totalTestActual": 120.9,
-    "totalDbActual": 38.5,
-    "totalBugActual": 41,
-    "uniqueResourcesCount": 23,
-    "avgHoursPerResource": 15.3,
-    "avgDevHours": 15.4,
-    "avgTestHours": 17.3,
-    "avgDbHours": 7.7,
-    "avgDevHoursInclMeetings": 18,
-    "avgTestHoursInclMeetings": 19.1,
-    "avgDbHoursInclMeetings": 9.5,
-    "bugSeverity": {
-      "critical": 3,
-      "high": 32,
-      "medium": 7,
-      "low": 1
-    },
-    "bugTypeCount": {
-      "generic": 1,
-      "specific": 42
-    },
-    "reworkRatio": 11.6,
-    "devCount": 15,
-    "testerCount": 7,
-    "dbCount": 5,
-    "devNames": [
-      "Karim El-Saeed",
-      "gamal kasem",
-      "Hesham Elsayed",
-      "Bassem Ayman",
-      "mohamed.abdelghany",
-      "Mohamed Samy",
-      "Adel Salah",
-      "Mohamed Salah-Eddin",
-      "Mohamed Ragab",
-      "Ola Gamal",
-      "Mohamed Hany",
-      "Samir Mohamed",
-      "Fatma Fayed",
-      "Ahmed Gamal",
-      "Mostafa Mamdouh"
-    ],
-    "testerNames": [
-      "Bassem Ayman",
-      "Salah Ahmed",
-      "Mohamed Ragab",
-      "Yasmine Fouad",
-      "Bothyna Mostafa",
-      "Mostafa Mamdouh",
-      "Mostafa Mohamed"
-    ],
-    "dbNames": [
-      "Ahmed Farag",
-      "Ahmed Attia",
-      "Mostafa Mahmoud",
-      "Moamen SalahElDeen",
-      "Ahmed Gamal"
-    ],
-    "businessMetrics": [
-      {
-        "area": "Front and Financial",
-        "totalStories": 5,
-        "completedStories": 5,
-        "avgCycleTime": 10.6,
-        "effortVariance": -7.8,
-        "dre": 83.3,
-        "internalBugs": 5,
-        "uatBugs": 1,
-        "totalDevActual": 72.1,
-        "totalTestActual": 44.7,
-        "totalDbActual": 10,
-        "totalBugActual": 5.3,
-        "uniqueResourcesCount": 10,
-        "avgHoursPerResource": 11.7,
-        "avgDevHours": 14.4,
-        "avgTestHours": 22.3,
-        "avgDbHours": 2.5,
-        "avgDevHoursInclMeetings": 15.1,
-        "avgTestHoursInclMeetings": 22.3,
-        "avgDbHoursInclMeetings": 2.5,
-        "bugSeverity": {
-          "critical": 0,
-          "high": 0,
-          "medium": 5,
-          "low": 0
-        },
-        "bugTypeCount": {
-          "generic": 0,
-          "specific": 5
-        },
-        "reworkRatio": 4.5,
-        "devCount": 5,
-        "testerCount": 2,
-        "dbCount": 4,
-        "devNames": [
-          "Karim El-Saeed",
-          "gamal kasem",
-          "Hesham Elsayed",
-          "Bassem Ayman",
-          "mohamed.abdelghany"
-        ],
-        "testerNames": [
-          "Bassem Ayman",
-          "Salah Ahmed"
-        ],
-        "dbNames": [
-          "Ahmed Farag",
-          "Ahmed Attia",
-          "Mostafa Mahmoud",
-          "Moamen SalahElDeen"
-        ]
-      },
-      {
-        "area": "Internal lab",
-        "totalStories": 3,
-        "completedStories": 3,
-        "avgCycleTime": 27.5,
-        "effortVariance": -16.6,
-        "dre": 96.9,
-        "internalBugs": 31,
-        "uatBugs": 1,
-        "totalDevActual": 98.7,
-        "totalTestActual": 53.3,
-        "totalDbActual": 5.5,
-        "totalBugActual": 22.5,
-        "uniqueResourcesCount": 9,
-        "avgHoursPerResource": 16.9,
-        "avgDevHours": 16.4,
-        "avgTestHours": 17.8,
-        "avgDbHours": 5.5,
-        "avgDevHoursInclMeetings": 19,
-        "avgTestHoursInclMeetings": 20,
-        "avgDbHoursInclMeetings": 5.5,
-        "bugSeverity": {
-          "critical": 0,
-          "high": 29,
-          "medium": 2,
-          "low": 0
-        },
-        "bugTypeCount": {
-          "generic": 1,
-          "specific": 30
-        },
-        "reworkRatio": 14.8,
-        "devCount": 6,
-        "testerCount": 3,
-        "dbCount": 1,
-        "devNames": [
-          "Mohamed Samy",
-          "Adel Salah",
-          "Mohamed Salah-Eddin",
-          "Mohamed Ragab",
-          "Ola Gamal",
-          "Mohamed Hany"
-        ],
-        "testerNames": [
-          "Mohamed Ragab",
-          "Yasmine Fouad",
-          "Bothyna Mostafa"
-        ],
-        "dbNames": [
-          "Ahmed Farag"
-        ]
-      },
-      {
-        "area": "Registration",
-        "totalStories": 3,
-        "completedStories": 3,
-        "avgCycleTime": 8.3,
-        "effortVariance": -47.6,
-        "dre": 87.5,
-        "internalBugs": 7,
-        "uatBugs": 1,
-        "totalDevActual": 60.8,
-        "totalTestActual": 23,
-        "totalDbActual": 23,
-        "totalBugActual": 13.3,
-        "uniqueResourcesCount": 7,
-        "avgHoursPerResource": 12,
-        "avgDevHours": 15.2,
-        "avgTestHours": 11.5,
-        "avgDbHours": 7.7,
-        "avgDevHoursInclMeetings": 20,
-        "avgTestHoursInclMeetings": 14.6,
-        "avgDbHoursInclMeetings": 10.7,
-        "bugSeverity": {
-          "critical": 3,
-          "high": 3,
-          "medium": 0,
-          "low": 1
-        },
-        "bugTypeCount": {
-          "generic": 0,
-          "specific": 7
-        },
-        "reworkRatio": 15.8,
-        "devCount": 4,
-        "testerCount": 2,
-        "dbCount": 3,
-        "devNames": [
-          "Samir Mohamed",
-          "Fatma Fayed",
-          "Ahmed Gamal",
-          "Mostafa Mamdouh"
-        ],
-        "testerNames": [
-          "Mostafa Mamdouh",
-          "Mostafa Mohamed"
-        ],
-        "dbNames": [
-          "Moamen SalahElDeen",
-          "Ahmed Farag",
-          "Ahmed Gamal"
-        ]
-      }
-    ]
-  },
-  {
     "iterationName": "August 23-12",
     "totalStories": 24,
     "completedStories": 24,
@@ -3696,16 +3469,16 @@
     "uatBugs": 2,
     "totalDevActual": 253.1,
     "totalTestActual": 231,
-    "totalDbActual": 31.5,
+    "totalDbActual": 32.5,
     "totalBugActual": 54.5,
     "uniqueResourcesCount": 32,
     "avgHoursPerResource": 15.1,
     "avgDevHours": 11.5,
     "avgTestHours": 17.8,
-    "avgDbHours": 5.3,
+    "avgDbHours": 6.5,
     "avgDevHoursInclMeetings": 13.1,
     "avgTestHoursInclMeetings": 18.1,
-    "avgDbHoursInclMeetings": 5.4,
+    "avgDbHoursInclMeetings": 6.7,
     "bugSeverity": {
       "critical": 8,
       "high": 8,
@@ -3719,7 +3492,7 @@
     "reworkRatio": 11.3,
     "devCount": 22,
     "testerCount": 13,
-    "dbCount": 6,
+    "dbCount": 5,
     "devNames": [
       "Ammar Allam",
       "Mohamed Salah-Eddin",
@@ -3764,7 +3537,6 @@
       "Ahmed Attia",
       "Moamen SalahElDeen",
       "Mostafa Mahmoud",
-      "Ibrahim Ahmed",
       "Samir Mohamed"
     ],
     "businessMetrics": [
@@ -3779,16 +3551,16 @@
         "uatBugs": 1,
         "totalDevActual": 117,
         "totalTestActual": 101.1,
-        "totalDbActual": 18.5,
+        "totalDbActual": 19.5,
         "totalBugActual": 23.8,
         "uniqueResourcesCount": 15,
         "avgHoursPerResource": 14.5,
         "avgDevHours": 13,
         "avgTestHours": 16.8,
-        "avgDbHours": 4.6,
+        "avgDbHours": 4.9,
         "avgDevHoursInclMeetings": 15.7,
         "avgTestHoursInclMeetings": 17.6,
-        "avgDbHoursInclMeetings": 4.6,
+        "avgDbHoursInclMeetings": 4.9,
         "bugSeverity": {
           "critical": 5,
           "high": 3,
@@ -3842,8 +3614,8 @@
         "totalTestActual": 48,
         "totalDbActual": 4.8,
         "totalBugActual": 5.3,
-        "uniqueResourcesCount": 7,
-        "avgHoursPerResource": 11.8,
+        "uniqueResourcesCount": 8,
+        "avgHoursPerResource": 10.3,
         "avgDevHours": 5.8,
         "avgTestHours": 24,
         "avgDbHours": 2.4,
@@ -3877,7 +3649,7 @@
           "Mostafa Mamdouh"
         ],
         "dbNames": [
-          "Ibrahim Ahmed",
+          "Ahmed Farag",
           "Samir Mohamed"
         ]
       },
@@ -3948,21 +3720,21 @@
     "totalStories": 32,
     "completedStories": 32,
     "avgCycleTime": 13.2,
-    "effortVariance": -21.4,
+    "effortVariance": -21.2,
     "dre": 100,
     "internalBugs": 98,
     "uatBugs": 0,
-    "totalDevActual": 549.9,
-    "totalTestActual": 360,
+    "totalDevActual": 550.1,
+    "totalTestActual": 363,
     "totalDbActual": 54.3,
     "totalBugActual": 100.3,
     "uniqueResourcesCount": 34,
-    "avgHoursPerResource": 26.8,
+    "avgHoursPerResource": 26.9,
     "avgDevHours": 22.9,
-    "avgTestHours": 25.7,
+    "avgTestHours": 25.9,
     "avgDbHours": 10.8,
     "avgDevHoursInclMeetings": 29.5,
-    "avgTestHoursInclMeetings": 28.6,
+    "avgTestHoursInclMeetings": 28.9,
     "avgDbHoursInclMeetings": 12.5,
     "bugSeverity": {
       "critical": 22,
@@ -4033,11 +3805,11 @@
         "totalStories": 15,
         "completedStories": 15,
         "avgCycleTime": 10.6,
-        "effortVariance": -26.1,
+        "effortVariance": -26,
         "dre": 100,
         "internalBugs": 25,
         "uatBugs": 0,
-        "totalDevActual": 218.3,
+        "totalDevActual": 218.5,
         "totalTestActual": 136.5,
         "totalDbActual": 22.5,
         "totalBugActual": 30.2,
@@ -4150,21 +3922,21 @@
         "totalStories": 9,
         "completedStories": 9,
         "avgCycleTime": 21.8,
-        "effortVariance": -21.7,
+        "effortVariance": -21.3,
         "dre": 100,
         "internalBugs": 61,
         "uatBugs": 0,
         "totalDevActual": 220.7,
-        "totalTestActual": 159.9,
+        "totalTestActual": 162.9,
         "totalDbActual": 21.5,
         "totalBugActual": 53.8,
         "uniqueResourcesCount": 16,
-        "avgHoursPerResource": 23.8,
+        "avgHoursPerResource": 24,
         "avgDevHours": 27.6,
-        "avgTestHours": 26.7,
+        "avgTestHours": 27.2,
         "avgDbHours": 5.4,
         "avgDevHoursInclMeetings": 39.7,
-        "avgTestHoursInclMeetings": 31.6,
+        "avgTestHoursInclMeetings": 32.1,
         "avgDbHoursInclMeetings": 5.4,
         "bugSeverity": {
           "critical": 14,
@@ -4176,7 +3948,7 @@
           "generic": 3,
           "specific": 58
         },
-        "reworkRatio": 14.1,
+        "reworkRatio": 14,
         "devCount": 8,
         "testerCount": 6,
         "dbCount": 4,
@@ -4203,6 +3975,266 @@
           "Moamen SalahElDeen",
           "Mostafa Mahmoud",
           "Ahmed Farag"
+        ]
+      }
+    ]
+  },
+  {
+    "iterationName": "November 1-22",
+    "totalStories": 50,
+    "completedStories": 50,
+    "avgCycleTime": 8.5,
+    "effortVariance": -42.3,
+    "dre": 100,
+    "internalBugs": 78,
+    "uatBugs": 0,
+    "totalDevActual": 638.2,
+    "totalTestActual": 440.4,
+    "totalDbActual": 64.8,
+    "totalBugActual": 90.6,
+    "uniqueResourcesCount": 32,
+    "avgHoursPerResource": 33.7,
+    "avgDevHours": 27.7,
+    "avgTestHours": 33.9,
+    "avgDbHours": 13,
+    "avgDevHoursInclMeetings": 34.8,
+    "avgTestHoursInclMeetings": 36.4,
+    "avgDbHoursInclMeetings": 13,
+    "bugSeverity": {
+      "critical": 5,
+      "high": 23,
+      "medium": 48,
+      "low": 2
+    },
+    "bugTypeCount": {
+      "generic": 25,
+      "specific": 53
+    },
+    "reworkRatio": 8.4,
+    "devCount": 23,
+    "testerCount": 13,
+    "dbCount": 5,
+    "devNames": [
+      "Ammar Allam",
+      "Mohamed Salah-Eddin",
+      "Ola Gamal",
+      "Esraa Abdelrahman",
+      "Esraa Abd El Salam",
+      "Mohamed Hany",
+      "Yasmine Fouad",
+      "Mohamed Ragab",
+      "Mohamed Abdelhady",
+      "Saddam Raees",
+      "Fatma Fayed",
+      "Adel Salah",
+      "Mahmoud Essam",
+      "Mostafa Mamdouh",
+      "Samir Mohamed",
+      "Mohamed Abd-Elalim",
+      "gamal kasem",
+      "Abdelrahman Salman",
+      "mohamed.abdelghany",
+      "Hesham Elsayed",
+      "Karim El-Saeed",
+      "Mahmoud Ahmed",
+      "Mohamed Bahaa"
+    ],
+    "testerNames": [
+      "Mohamed Abdelhady",
+      "Bothyna Mostafa",
+      "Esraa Abdelrahman",
+      "Yasmine Fouad",
+      "Mohamed Ragab",
+      "Mostafa Mamdouh",
+      "Mostafa Mohamed",
+      "Mohamed Abd-Elalim",
+      "Mohamed Fawzy",
+      "Abdelrahman Salman",
+      "Salah Ahmed",
+      "Bassem Ayman",
+      "Mohamed Bahaa"
+    ],
+    "dbNames": [
+      "Mostafa Mahmoud",
+      "Ahmed Attia",
+      "Mohamed Salah-Eddin",
+      "Moamen SalahElDeen",
+      "Ahmed Farag"
+    ],
+    "businessMetrics": [
+      {
+        "area": "Internal lab",
+        "totalStories": 13,
+        "completedStories": 13,
+        "avgCycleTime": 14.7,
+        "effortVariance": -18.9,
+        "dre": 100,
+        "internalBugs": 52,
+        "uatBugs": 0,
+        "totalDevActual": 215.8,
+        "totalTestActual": 226.4,
+        "totalDbActual": 25.1,
+        "totalBugActual": 51,
+        "uniqueResourcesCount": 15,
+        "avgHoursPerResource": 29.5,
+        "avgDevHours": 21.6,
+        "avgTestHours": 45.3,
+        "avgDbHours": 5,
+        "avgDevHoursInclMeetings": 30.8,
+        "avgTestHoursInclMeetings": 50.8,
+        "avgDbHoursInclMeetings": 5,
+        "bugSeverity": {
+          "critical": 3,
+          "high": 21,
+          "medium": 26,
+          "low": 2
+        },
+        "bugTypeCount": {
+          "generic": 16,
+          "specific": 36
+        },
+        "reworkRatio": 11.5,
+        "devCount": 10,
+        "testerCount": 5,
+        "dbCount": 5,
+        "devNames": [
+          "Ammar Allam",
+          "Mohamed Salah-Eddin",
+          "Ola Gamal",
+          "Esraa Abdelrahman",
+          "Esraa Abd El Salam",
+          "Mohamed Hany",
+          "Yasmine Fouad",
+          "Mohamed Ragab",
+          "Mohamed Abdelhady",
+          "Saddam Raees"
+        ],
+        "testerNames": [
+          "Mohamed Abdelhady",
+          "Bothyna Mostafa",
+          "Esraa Abdelrahman",
+          "Yasmine Fouad",
+          "Mohamed Ragab"
+        ],
+        "dbNames": [
+          "Mostafa Mahmoud",
+          "Ahmed Attia",
+          "Mohamed Salah-Eddin",
+          "Moamen SalahElDeen",
+          "Ahmed Farag"
+        ]
+      },
+      {
+        "area": "Registration",
+        "totalStories": 21,
+        "completedStories": 21,
+        "avgCycleTime": 3.6,
+        "effortVariance": -74.3,
+        "dre": 100,
+        "internalBugs": 2,
+        "uatBugs": 0,
+        "totalDevActual": 98.3,
+        "totalTestActual": 107.5,
+        "totalDbActual": 22.8,
+        "totalBugActual": 1.1,
+        "uniqueResourcesCount": 12,
+        "avgHoursPerResource": 17.2,
+        "avgDevHours": 16.4,
+        "avgTestHours": 26.9,
+        "avgDbHours": 5.7,
+        "avgDevHoursInclMeetings": 18.7,
+        "avgTestHoursInclMeetings": 27.6,
+        "avgDbHoursInclMeetings": 5.7,
+        "bugSeverity": {
+          "critical": 0,
+          "high": 2,
+          "medium": 0,
+          "low": 0
+        },
+        "bugTypeCount": {
+          "generic": 0,
+          "specific": 2
+        },
+        "reworkRatio": 0.5,
+        "devCount": 6,
+        "testerCount": 4,
+        "dbCount": 4,
+        "devNames": [
+          "Fatma Fayed",
+          "Adel Salah",
+          "Mahmoud Essam",
+          "Mostafa Mamdouh",
+          "Samir Mohamed",
+          "Mohamed Abd-Elalim"
+        ],
+        "testerNames": [
+          "Mostafa Mamdouh",
+          "Mostafa Mohamed",
+          "Mohamed Abd-Elalim",
+          "Mohamed Fawzy"
+        ],
+        "dbNames": [
+          "Ahmed Attia",
+          "Mostafa Mahmoud",
+          "Moamen SalahElDeen",
+          "Ahmed Farag"
+        ]
+      },
+      {
+        "area": "Front and Financial",
+        "totalStories": 16,
+        "completedStories": 16,
+        "avgCycleTime": 9.8,
+        "effortVariance": -17.6,
+        "dre": 100,
+        "internalBugs": 24,
+        "uatBugs": 0,
+        "totalDevActual": 324.1,
+        "totalTestActual": 106.5,
+        "totalDbActual": 17,
+        "totalBugActual": 38.5,
+        "uniqueResourcesCount": 13,
+        "avgHoursPerResource": 33.1,
+        "avgDevHours": 40.5,
+        "avgTestHours": 26.6,
+        "avgDbHours": 5.7,
+        "avgDevHoursInclMeetings": 47.5,
+        "avgTestHoursInclMeetings": 27,
+        "avgDbHoursInclMeetings": 5.7,
+        "bugSeverity": {
+          "critical": 2,
+          "high": 0,
+          "medium": 22,
+          "low": 0
+        },
+        "bugTypeCount": {
+          "generic": 9,
+          "specific": 15
+        },
+        "reworkRatio": 8.9,
+        "devCount": 8,
+        "testerCount": 4,
+        "dbCount": 3,
+        "devNames": [
+          "Adel Salah",
+          "gamal kasem",
+          "Abdelrahman Salman",
+          "mohamed.abdelghany",
+          "Hesham Elsayed",
+          "Karim El-Saeed",
+          "Mahmoud Ahmed",
+          "Mohamed Bahaa"
+        ],
+        "testerNames": [
+          "Abdelrahman Salman",
+          "Salah Ahmed",
+          "Bassem Ayman",
+          "Mohamed Bahaa"
+        ],
+        "dbNames": [
+          "Mostafa Mahmoud",
+          "Ahmed Farag",
+          "Ahmed Attia"
         ]
       }
     ]
